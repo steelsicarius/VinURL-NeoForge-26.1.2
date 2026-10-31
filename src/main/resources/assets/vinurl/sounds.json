@@ -1,0 +1,11 @@
+{
+  "placeholder_sound": {
+    "sounds": [
+      {
+        "name": "vinurl:placeholder_sound",
+        "attenuation_distance": 64,
+        "stream": true
+      }
+    ]
+  }
+}
