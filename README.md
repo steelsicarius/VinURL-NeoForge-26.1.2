@@ -45,7 +45,19 @@ This is a NeoForge port of the original Fabric mod. Key changes from the origina
 - **GUI**: owo-ui → Vanilla Minecraft widgets
 - **Mod ID**: `vinurl` (unchanged)
 - **Package**: `com.vinurl` (unchanged)
-- **Jar**: `vinurl-2.6.0-mc26.1.2.jar`
+- **Jar**: `vinurl-2.6.0.jar`
+
+## Mixins
+
+VinURL uses SpongePowered mixins for two features:
+- **JukeboxMixin** (server): Automatically starts/stops VinURL sound when inserting/removing discs from jukeboxes, and stops playback after the configured duration
+- **InGameHudMixin** (client): Suppresses the vanilla record overlay when playing VinURL records
+
+Both mixins are loaded at runtime via `vinurl.mixins.json` referenced in `neoforge.mods.toml`.
+
+## Client Disconnect
+
+When the client disconnects from a server, all active download/transcode processes (yt-dlp, ffmpeg, deno) are automatically killed via `Executable.killAllProcesses()`.
 
 ## Building
 
