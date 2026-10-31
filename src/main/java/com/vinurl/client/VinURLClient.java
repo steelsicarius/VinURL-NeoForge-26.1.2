@@ -14,6 +14,7 @@ import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.fml.event.lifecycle.FMLClientSetupEvent;
 import net.neoforged.neoforge.client.event.RenderGuiEvent;
+import net.neoforged.neoforge.client.event.ClientPlayerNetworkEvent;
 import net.neoforged.neoforge.event.entity.player.ItemTooltipEvent;
 
 import static com.vinurl.VinURL.CUSTOM_RECORD;
@@ -22,6 +23,13 @@ import static com.vinurl.VinURL.CUSTOM_RECORD;
 public class VinURLClient {
 	public static final ClientConfig CONFIG = new ClientConfig();
 	public static final Minecraft CLIENT = Minecraft.getInstance();
+
+	@SubscribeEvent
+	public static void onClientDisconnect(ClientPlayerNetworkEvent.LoggingOut event) {
+		// Kill all active download/transcode processes when disconnecting from a server
+		Executable.killAllProcesses();
+		org.slf4j.LoggerFactory.getLogger("VinURL").info("Client disconnected: killed all active processes");
+	}
 
 	@SubscribeEvent
 	public static void onClientSetup(FMLClientSetupEvent event) {
