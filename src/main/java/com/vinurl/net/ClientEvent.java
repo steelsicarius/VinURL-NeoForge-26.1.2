@@ -1,5 +1,7 @@
 package com.vinurl.net;
 
+import com.vinurl.gui.URLDiscScreen;
+import net.minecraft.client.Minecraft;
 import net.minecraft.core.BlockPos;
 import net.neoforged.neoforge.network.handling.IPayloadContext;
 
@@ -15,7 +17,8 @@ public class ClientEvent {
 	}
 
 	public static void handleGUIRecord(Payloads.GUIRecord message, IPayloadContext context) {
-		// TODO: Phase 3 - Implement client-side GUI open
-		// Depends on URLDiscScreen, Minecraft, etc.
+		context.enqueueWork(() -> {
+			Minecraft.getInstance().setScreen(new URLDiscScreen(message.url(), message.duration()));
+		});
 	}
 }

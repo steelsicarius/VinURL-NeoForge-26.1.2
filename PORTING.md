@@ -64,4 +64,10 @@
 - 2026-10-31: `./gradlew build` EXITOSO. Jar: build/libs/vinurl-2.6.0.jar.
 - 2026-10-31: `./gradlew runServer` puerto 25599 EXITOSO. Sin excepciones ni warnings de VinURL.
 
+- 2026-11-01: FIX GUI no abriendo al click derecho en Custom Music Disc.
+  - `URLDisc.use()`: descomentado envío de `GUIRecord` via `PacketDistributor.sendToPlayer()` al jugador con URL y duración del custom data.
+  - `ClientEvent.handleGUIRecord()`: implementado — `context.enqueueWork(() -> Minecraft.getInstance().setScreen(new URLDiscScreen(url, duration)))`.
+  - `Network.java`: handlers client-bound movidos a `ClientNetwork.java` (`@EventBusSubscriber(value = Dist.CLIENT)`) para evitar `NoClassDefFoundError` de clases de cliente en servidor dedicado.
+  - Build y runServer verificados sin errores.
+
 ## Jar: build/libs/vinurl-2.6.0.jar

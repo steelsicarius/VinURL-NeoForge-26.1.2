@@ -1,9 +1,11 @@
 package com.vinurl.item;
 
+import com.vinurl.net.Payloads;
 import com.vinurl.util.Constants;
 import net.minecraft.core.component.DataComponents;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.chat.Component;
+import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.player.Player;
@@ -12,6 +14,7 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Rarity;
 import net.minecraft.world.item.component.CustomData;
 import net.minecraft.world.level.Level;
+import net.neoforged.neoforge.network.PacketDistributor;
 
 import static com.vinurl.util.Constants.*;
 
@@ -31,8 +34,9 @@ public class URLDisc extends Item {
 		if (!level.isClientSide()) {
 			CompoundTag tag = stack.getOrDefault(DataComponents.CUSTOM_DATA, CustomData.EMPTY).copyTag();
 			if (!tag.getBoolean("lock").orElse(false)) {
-				// TODO: Open GUI via network (Phase 2 - NeoForge networking)
-				// NETWORK_CHANNEL.serverHandle(player).send(new ClientEvent.GUIRecord(tag.getString("music_url"), tag.getInt("duration")));
+				String url = tag.getString("music_url").orElse("");
+				int duration = tag.getInt("duration").orElse(0);
+				PacketDistributor.sendToPlayer((ServerPlayer) player, new Payloads.GUIRecord(url, duration));
 			} else {
 				player.sendOverlayMessage(Component.translatable("item.vinurl.custom_record.message.locked"));
 			}
