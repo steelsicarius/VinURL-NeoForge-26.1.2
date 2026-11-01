@@ -45,7 +45,15 @@ This is a NeoForge port of the original Fabric mod. Key changes from the origina
 - **GUI**: owo-ui → Vanilla Minecraft widgets
 - **Mod ID**: `vinurl` (unchanged)
 - **Package**: `com.vinurl` (unchanged)
-- **Jar**: `vinurl-2.6.0.jar`
+- **Jar**: `vinurl-2.6.1.jar`
+
+### Fixes in 2.6.1 (post-port bugfix release)
+
+- **Mod icon in disc screen**: 26.1.2 resolves `blit()` identifiers directly as resource paths (no automatic `textures/` prefix / `.png` suffix). Icon id is now `vinurl:textures/icon.png`; `logoFile` in `neoforge.mods.toml` likewise points to the jar-root path `assets/vinurl/textures/icon.png`.
+- **Download/Simulate never finishing**: `commons-exec` was missing from the production jar (`runtimeOnly` does not package dependencies). It is now shaded into the jar via the `jar` task.
+- **Config resetting on restart**: (1) `ConfigValue.set()` in NeoForge 26.1.2 only updates memory — every `set()` is now followed by `save()`. (2) `urlWhitelist` was declared with `define(path, Collections.emptyList())`, whose validator rejects the `ArrayList` read back from the TOML file, so the config loader reset it on every startup — now declared with `defineListAllowEmpty(..., o -> o instanceof String)`.
+- **Silent placeholder sound**: `sounds.json` referenced `vinurl:placeholder_sound` without an audio file. Added a 1-second silent OGG (`assets/vinurl/sounds/placeholder_sound.ogg`), matching the Fabric original's use of `fabric-sound-api-v1:empty`. Without a real file, `SoundEngine.play()` aborts with `EMPTY_SOUND` before the custom `getStream()` is ever called — no audio would play even after a successful download.
+- **Client mixin on dedicated server**: `InGameHudMixin` moved from `mixins` to the `client` section of `vinurl.mixins.json` (removes the `Attempted to load class net.minecraft.client.gui.Gui` error on dedicated servers).
 
 ## Mixins
 
@@ -75,7 +83,6 @@ Server runs on port 25599 by default.
 
 ## Dependencies
 
-- commons-exec 1.6.0 (yt-dlp/ffmpeg/deno process management)
-- JNA 5.14.0 (platform detection)
-- jorbis (Vorbis audio metadata reading)
-- commons-codec (SHA-256 hashing for URL filenames)
+- commons-exec 1.6.0 (yt-dlp/ffmpeg/deno process management) — **shaded into the jar** (plain library, cannot use JarJar; the Fabric original bundled it via `include`)
+- Provided by vanilla Minecraft at runtime (launcher libraries, not bundled): JNA 5.17.0 (platform detection), jorbis (Vorbis audio metadata), commons-codec, commons-io, commons-lang3
+- Mixin annotations 0.8.5 (compileOnly)

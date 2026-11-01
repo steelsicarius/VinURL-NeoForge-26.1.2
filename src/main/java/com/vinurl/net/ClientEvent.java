@@ -66,11 +66,13 @@ public class ClientEvent {
 
 		KeyListener.waitForKeyPress().thenAccept((confirmed) -> {
 			if (confirmed) {
-				// Persist whitelist change in ModConfigSpec (must call set() to save to disk)
+				// Persist whitelist change: set() only updates memory in NeoForge 26.1.2,
+				// save() writes the config file to disk.
 				var current = ClientConfig.URL_WHITELIST.get();
-				var updated = new java.util.ArrayList<>(current);
+				var updated = new java.util.ArrayList<String>(current);
 				updated.add(baseUrl.toString());
 				ClientConfig.URL_WHITELIST.set(updated);
+				ClientConfig.URL_WHITELIST.save();
 				SoundManager.downloadSound(url.toString(), fileName);
 				SoundManager.queueSound(fileSound);
 			}

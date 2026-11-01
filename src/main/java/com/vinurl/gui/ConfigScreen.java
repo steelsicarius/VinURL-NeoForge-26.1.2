@@ -30,6 +30,7 @@ public class ConfigScreen extends Screen {
 			(button) -> {
 				boolean newVal = !VinURLClient.CONFIG.downloadEnabled();
 				VinURLClient.CONFIG.DOWNLOAD_ENABLED.set(newVal);
+				VinURLClient.CONFIG.DOWNLOAD_ENABLED.save();
 				button.setMessage(Component.literal("Download Enabled: " + newVal));
 			}
 		).bounds(width / 2 - 150, height / 2 - 60, 200, 20).build();
@@ -41,6 +42,7 @@ public class ConfigScreen extends Screen {
 			(button) -> {
 				boolean newVal = !VinURLClient.CONFIG.updatesOnStartup();
 				VinURLClient.CONFIG.UPDATES_ON_STARTUP.set(newVal);
+				VinURLClient.CONFIG.UPDATES_ON_STARTUP.save();
 				button.setMessage(Component.literal("Updates on Startup: " + newVal));
 			}
 		).bounds(width / 2 - 150, height / 2 - 30, 200, 20).build();
@@ -52,6 +54,7 @@ public class ConfigScreen extends Screen {
 			(button) -> {
 				boolean newVal = !VinURLClient.CONFIG.showDescription();
 				VinURLClient.CONFIG.SHOW_DESCRIPTION.set(newVal);
+				VinURLClient.CONFIG.SHOW_DESCRIPTION.save();
 				button.setMessage(Component.literal("Show Description: " + newVal));
 			}
 		).bounds(width / 2 - 150, height / 2, 200, 20).build();
@@ -67,6 +70,7 @@ public class ConfigScreen extends Screen {
 			Component.literal("Done"),
 			(button) -> {
 				VinURLClient.CONFIG.PARAMETERS.set(this.parametersField.getValue());
+				VinURLClient.CONFIG.PARAMETERS.save();
 				this.onClose();
 			}
 		).bounds(width / 2 - 50, height / 2 + 70, 100, 20).build();

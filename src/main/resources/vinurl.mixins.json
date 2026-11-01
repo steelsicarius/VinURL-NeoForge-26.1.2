@@ -1,9 +1,11 @@
 {
   "required": true,
   "package": "com.vinurl.mixin",
-  "compatibilityLevel": "JAVA_13",
+  "compatibilityLevel": "JAVA_25",
   "mixins": [
-    "JukeboxMixin",
+    "JukeboxMixin"
+  ],
+  "client": [
     "InGameHudMixin"
   ],
   "injectors": {

@@ -13,7 +13,11 @@ public class ClientConfig {
 	public static final ModConfigSpec.ConfigValue<Boolean> DOWNLOAD_ENABLED;
 	public static final ModConfigSpec.ConfigValue<Boolean> UPDATES_ON_STARTUP;
 	public static final ModConfigSpec.ConfigValue<Boolean> SHOW_DESCRIPTION;
-	public static final ModConfigSpec.ConfigValue<List<String>> URL_WHITELIST;
+	// defineListAllowEmpty: `define(path, Collections.emptyList())` creates a validator based on the
+	// default's exact class (Collections$EmptyList), which REJECTS the ArrayList read back from the
+	// TOML file -> the config loader "corrects" (resets) the key on every startup. defineListAllowEmpty
+	// permits an empty list and validates elements as Strings instead.
+	public static final ModConfigSpec.ConfigValue<List<? extends String>> URL_WHITELIST;
 	public static final ModConfigSpec.ConfigValue<AudioQuality> AUDIO_BITRATE;
 	public static final ModConfigSpec.ConfigValue<String> PARAMETERS;
 
@@ -24,7 +28,7 @@ public class ClientConfig {
 		DOWNLOAD_ENABLED = builder.define("downloadEnabled", true);
 		UPDATES_ON_STARTUP = builder.define("updatesOnStartup", true);
 		SHOW_DESCRIPTION = builder.define("showDescription", true);
-		URL_WHITELIST = builder.define("urlWhitelist", java.util.Collections.<String>emptyList());
+		URL_WHITELIST = builder.defineListAllowEmpty("urlWhitelist", java.util.List.of(), () -> "", o -> o instanceof String);
 		builder.pop();
 
 		builder.push("downloadSettings");
@@ -47,7 +51,7 @@ public class ClientConfig {
 		return SHOW_DESCRIPTION.get();
 	}
 
-	public List<String> urlWhitelist() {
+	public List<? extends String> urlWhitelist() {
 		return URL_WHITELIST.get();
 	}
 

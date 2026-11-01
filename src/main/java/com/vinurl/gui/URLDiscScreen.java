@@ -25,7 +25,10 @@ public class URLDiscScreen extends Screen {
 	private boolean lock;
 	private boolean simulate;
 	private int duration;
-	private static final Identifier ICON_ID = Identifier.fromNamespaceAndPath(Constants.MOD_ID, "icon");
+	private static final Identifier ICON_ID = Identifier.fromNamespaceAndPath(Constants.MOD_ID, "textures/icon.png");
+	// 26.1.2: blit() resolves the Identifier directly as a resource path (assets/<ns>/<path>),
+	// with NO automatic textures/ prefix or .png suffix — vanilla uses full paths too
+	// (e.g. LogoRenderer: "textures/gui/title/minecraft.png").
 
 	public URLDiscScreen(String defaultUrl, int defaultDuration) {
 		super(Component.literal("VinURL Disc"));

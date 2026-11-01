@@ -90,18 +90,37 @@ configurations {
     runtimeClasspath.extendsFrom localRuntime
 }
 
+// commons-exec is a plain library (not a mod): JarJar cannot nest it, so we SHADE its
+// classes into the mod jar below. The original Fabric mod did the same via `include`.
+// runtimeClasspath extends jarLibs so the library is also visible when running dev clients/servers.
+configurations {
+    jarLibs
+    runtimeClasspath.extendsFrom jarLibs
+}
+
 dependencies {
     // Commons-exec from Fabric origin (yt-dlp/ffmpeg/deno download helpers)
-    // compileOnly for compilation (used in public method signatures)
-    // runtimeOnly for NeoForge ModuleClassLoader visibility at runtime
+    // compileOnly for compilation (used in public method signatures), shaded into the jar by the `jar` task
     compileOnly "org.apache.commons:commons-exec:1.6.0"
-    runtimeOnly "org.apache.commons:commons-exec:1.6.0"
-    // JNA used by Platform.exe for OS detection (was transitive via fabric-api)
-    compileOnly "net.java.dev.jna:jna:5.14.0"
-    runtimeOnly "net.java.dev.jna:jna:5.14.0"
+    jarLibs "org.apache.commons:commons-exec:1.6.0"
+    // NOTE: JNA (com.sun.jna) is NOT bundled: vanilla MC 26.1.2 ships net.java.dev.jna:jna:5.17.0
+    // as a launcher library, and the original Fabric mod did not include it either.
+    // NOTE: commons-codec/commons-io/commons-lang3/jorbis are also vanilla launcher libraries.
     // Mixin annotations (compileOnly - annotation processor can't access deobfuscated MC classes in this env;
     // mixins load at runtime via [[mixins]] in neoforge.mods.toml - see PORTING.md)
     compileOnly "org.spongepowered:mixin:0.8.5"
+}
+
+// Shade the bundled libraries' classes into the mod jar (production parity with Fabric `include`).
+tasks.jar {
+    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+    from {
+        configurations.jarLibs.collect { it.isDirectory() ? it : zipTree(it) }
+    }
+    exclude 'module-info.class'
+    exclude 'META-INF/*.SF', 'META-INF/*.DSA', 'META-INF/*.RSA'
+    exclude 'META-INF/versions/**/module-info.class'
+    exclude 'META-INF/LICENSE*', 'META-INF/NOTICE*', 'META-INF/DEPENDENCIES'
 }
 
 // This block of code expands all declared replace properties in the specified resource targets.
