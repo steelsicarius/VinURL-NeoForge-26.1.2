@@ -64,6 +64,11 @@
 - 2026-10-31: `./gradlew build` EXITOSO. Jar: build/libs/vinurl-2.6.0.jar.
 - 2026-10-31: `./gradlew runServer` puerto 25599 EXITOSO. Sin excepciones ni warnings de VinURL.
 
+- 2026-11-01: FIX GUI URL input length y falta de icono del mod en URLDiscScreen.
+  - `URLDiscScreen.urlField.setMaxLength(2048)`: permitía pegar URLs largas de YouTube (superan el límite por defecto de EditBox ~256 chars).
+  - `URLDiscScreen`: añadido `context.blit(ICON_ID, ...)` en `extractRenderState` para renderizar `assets/vinurl/icon.png` (48x48) a la izquierda de la pantalla.
+  - Build y runServer verificados sin errores.
+
 - 2026-11-01: FIX GUI no abriendo al click derecho en Custom Music Disc.
   - `URLDisc.use()`: descomentado envío de `GUIRecord` via `PacketDistributor.sendToPlayer()` al jugador con URL y duración del custom data.
   - `ClientEvent.handleGUIRecord()`: implementado — `context.enqueueWork(() -> Minecraft.getInstance().setScreen(new URLDiscScreen(url, duration)))`.

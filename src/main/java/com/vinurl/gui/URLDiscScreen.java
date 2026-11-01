@@ -4,12 +4,14 @@ import com.vinurl.client.SoundManager;
 import com.vinurl.client.VinURLClient;
 import com.vinurl.exe.Executable;
 import com.vinurl.net.Payloads;
+import com.vinurl.util.Constants;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.protocol.common.ServerboundCustomPayloadPacket;
+import net.minecraft.resources.Identifier;
 
 public class URLDiscScreen extends Screen {
 	private final String defaultUrl;
@@ -20,6 +22,7 @@ public class URLDiscScreen extends Screen {
 	private Button doneButton;
 	private boolean lock;
 	private boolean simulate;
+	private static final Identifier ICON_ID = Identifier.fromNamespaceAndPath(Constants.MOD_ID, "icon");
 
 	public URLDiscScreen(String defaultUrl, int defaultDuration) {
 		super(Component.literal("VinURL Disc"));
@@ -38,6 +41,7 @@ public class URLDiscScreen extends Screen {
 
 		// URL text field
 		this.urlField = new EditBox(this.font, width / 2 - 150, height / 2 - 40, 300, 20, Component.literal("URL"));
+		this.urlField.setMaxLength(2048);
 		this.urlField.setValue(defaultUrl);
 		this.addRenderableWidget(this.urlField);
 
@@ -98,6 +102,11 @@ public class URLDiscScreen extends Screen {
 	@Override
 	public void extractRenderState(GuiGraphicsExtractor context, int mouseX, int mouseY, float delta) {
 		super.extractRenderState(context, mouseX, mouseY, delta);
+		// Mod icon on the left
+		int iconSize = 48;
+		int iconX = this.width / 2 - 190;
+		int iconY = this.height / 2 - iconSize / 2;
+		context.blit(ICON_ID, iconX, iconY, iconSize, iconSize, 0.0f, 0.0f, 1.0f, 1.0f);
 		context.centeredText(this.font, Component.literal("VinURL Disc"), this.width / 2, this.height / 2 - 60, 0xFFFFFF);
 		context.text(this.font, Component.literal("URL:"), this.width / 2 - 160, this.height / 2 - 37, 0xAAAAAA);
 	}
