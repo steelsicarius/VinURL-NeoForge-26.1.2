@@ -68,6 +68,23 @@ public class URLDiscScreen extends Screen {
 				button.setMessage(Component.literal("Calculating..."));
 				String url = urlField.getValue();
 				String fileName = SoundManager.getFileName(url);
+
+				// Ensure yt-dlp and deno executables are available before running
+				if (!Executable.YT_DLP.checkForExecutable()) {
+					Minecraft.getInstance().execute(() -> {
+						button.setMessage(Component.literal("Error: yt-dlp"));
+					});
+					simulate = false;
+					return;
+				}
+				if (!Executable.DENO.checkForExecutable()) {
+					Minecraft.getInstance().execute(() -> {
+						button.setMessage(Component.literal("Error: deno"));
+					});
+					simulate = false;
+					return;
+				}
+
 				Executable.executeCommand(
 					fileName + "/duration",
 					Executable.YT_DLP.getCommandLine().addArguments(new String[] {
@@ -128,7 +145,8 @@ public class URLDiscScreen extends Screen {
 		int iconSize = 48;
 		int iconX = this.width / 2 - 190;
 		int iconY = this.height / 2 - iconSize / 2;
-		context.blit(ICON_ID, iconX, iconY, iconSize, iconSize, 0.0f, 0.0f, 1.0f, 1.0f);
+		// GuiGraphicsExtractor.blit takes x0,y0,x1,y1 (corners), not x,y,width,height
+		context.blit(ICON_ID, iconX, iconY, iconX + iconSize, iconY + iconSize, 0.0f, 1.0f, 0.0f, 1.0f);
 		context.centeredText(this.font, Component.literal("VinURL Disc"), this.width / 2, this.height / 2 - 60, 0xFFFFFF);
 		context.text(this.font, Component.literal("URL:"), this.width / 2 - 160, this.height / 2 - 37, 0xAAAAAA);
 	}
