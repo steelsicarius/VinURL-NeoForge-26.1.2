@@ -9,6 +9,7 @@ import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.client.gui.screens.Screen;
+import net.minecraft.client.input.KeyEvent;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.protocol.common.ServerboundCustomPayloadPacket;
 import net.minecraft.resources.Identifier;
@@ -22,12 +23,14 @@ public class URLDiscScreen extends Screen {
 	private Button doneButton;
 	private boolean lock;
 	private boolean simulate;
+	private int duration;
 	private static final Identifier ICON_ID = Identifier.fromNamespaceAndPath(Constants.MOD_ID, "icon");
 
 	public URLDiscScreen(String defaultUrl, int defaultDuration) {
 		super(Component.literal("VinURL Disc"));
 		this.defaultUrl = defaultUrl;
 		this.defaultDuration = defaultDuration;
+		this.duration = defaultDuration;
 		this.lock = false;
 		this.simulate = false;
 	}
@@ -59,13 +62,15 @@ public class URLDiscScreen extends Screen {
 		this.simulateButton = Button.builder(
 			Component.literal("Simulate"),
 			(button) -> {
-				if (simulate) {return;}
+				if (simulate) { return; }
 				simulate = true;
-				String fileName = SoundManager.getFileName(defaultUrl);
+				button.setMessage(Component.literal("Calculating..."));
+				String url = urlField.getValue();
+				String fileName = SoundManager.getFileName(url);
 				Executable.executeCommand(
 					fileName + "/duration",
 					Executable.YT_DLP.getCommandLine().addArguments(new String[] {
-						defaultUrl, "--print", "DURATION: %(duration)d", "--no-playlist",
+						url, "--print", "DURATION: %(duration)d", "--no-playlist",
 						"--js-runtimes", "deno:" + Executable.DENO.FILE_PATH
 					}, false).addArguments(VinURLClient.CONFIG.parameters())
 				).subscribe("duration")
@@ -74,12 +79,29 @@ public class URLDiscScreen extends Screen {
 						String message = output.substring(type.length()).trim();
 						if ("DURATION:".equals(type)) {
 							try {
-								int duration = Integer.parseInt(message);
-							} catch (NumberFormatException e) {}
+								duration = Integer.parseInt(message);
+								VinURLClient.CLIENT.execute(() -> {
+									button.setMessage(Component.literal("Duration: " + duration + "s"));
+								});
+							} catch (NumberFormatException e) {
+								VinURLClient.CLIENT.execute(() -> {
+									button.setMessage(Component.literal("Simulate"));
+								});
+							}
 						}
 					})
-					.onError((error) -> {simulate = false;})
-					.onComplete(() -> {simulate = false;})
+					.onError((error) -> {
+						simulate = false;
+						VinURLClient.CLIENT.execute(() -> {
+							button.setMessage(Component.literal("Simulate"));
+						});
+					})
+					.onComplete(() -> {
+						simulate = false;
+						VinURLClient.CLIENT.execute(() -> {
+							button.setMessage(Component.literal("Simulate"));
+						});
+					})
 				.start();
 			}
 		).bounds(width / 2 + 90, height / 2 - 10, 100, 20).build();
@@ -90,7 +112,6 @@ public class URLDiscScreen extends Screen {
 			Component.literal("Done"),
 			(button) -> {
 				String url = urlField.getValue();
-				int duration = defaultDuration;
 				Payloads.SetURLRecord payload = new Payloads.SetURLRecord(url, duration, lock);
 				VinURLClient.CLIENT.getConnection().send(new ServerboundCustomPayloadPacket(payload));
 				this.onClose();
@@ -109,6 +130,18 @@ public class URLDiscScreen extends Screen {
 		context.blit(ICON_ID, iconX, iconY, iconSize, iconSize, 0.0f, 0.0f, 1.0f, 1.0f);
 		context.centeredText(this.font, Component.literal("VinURL Disc"), this.width / 2, this.height / 2 - 60, 0xFFFFFF);
 		context.text(this.font, Component.literal("URL:"), this.width / 2 - 160, this.height / 2 - 37, 0xAAAAAA);
+	}
+
+	@Override
+	public boolean keyPressed(KeyEvent event) {
+		if (event.key() == 256 || event.key() == 257) { // GLFW_KEY_ESCAPE or GLFW_KEY_ENTER
+			String url = urlField.getValue();
+			Payloads.SetURLRecord payload = new Payloads.SetURLRecord(url, duration, lock);
+			VinURLClient.CLIENT.getConnection().send(new ServerboundCustomPayloadPacket(payload));
+			this.onClose();
+			return true;
+		}
+		return super.keyPressed(event);
 	}
 
 	@Override

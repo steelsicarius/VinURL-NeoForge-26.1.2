@@ -15,7 +15,7 @@
 - Creative tab: se añade a `TOOLS_AND_UTILITIES`
 - Mixins: `JukeboxMixin` (JukeboxBlockEntity: setTheItem/popOutTheItem/tick), `InGameHudMixin` (Gui.setNowPlaying)
 - Red (NeoForge CustomPacketPayload): PlaySoundRecord, StopSoundRecord, GUIRecord (clientbound), SetURLRecord (serverbound)
-- Cliente: KeyListener (tecla Y), Commands (/vinurl delete|update|config, cliente), SoundManager (yt-dlp/ffmpeg/deno vía commons-exec), FileSound, SkippableAudioStream, ClientConfig (ModConfigSpec), URLDiscScreen (widgets vanilla), ProgressOverlay (RenderGuiEvent), VinURLClient
+- Cliente: KeyListener (tecla Y), Commands (/vinurl delete|update|config, cliente), SoundManager (yt-dlp/ffmpeg/deno vía commons-exec), FileSound, SkippableAudioStream, ClientConfig (ModConfigSpec), URLDiscScreen (widgets vanilla), ConfigScreen (vanilla), ProgressOverlay (RenderGuiEvent), VinURLClient
 - Commons: Executable, Platform (jna), ProcessStream, Util.Url, Constants
 - Dependencias: commons-exec 1.6.0, jna 5.14.0, mixin 0.8.5
 - Assets: icon, lang en_us, item model, textures, 9 nine_patch jsons, sounds.json (placeholder_sound → vinurl:placeholder_sound)
@@ -25,7 +25,7 @@
 0. Esqueleto: build.gradle, gradle.properties, settings.gradle, neoforge.mods.toml, mod id, paquete. ✅
 1. Registros: item, sound event, creative tab, tags/recipe/jukebox_song (datos). ✅
 2. Lógica: URLDisc item, VinURLSound, ServerEvent/ClientEvent red, mixins, Executable suite. ✅
-3. Cliente: keybinding, client commands, client config, URLDiscScreen (vanilla widgets), SoundManager/FileSound, progress overlay, tooltips. ✅
+3. Cliente: keybinding, client commands, client config, URLDiscScreen (vanilla widgets), ConfigScreen (vanilla), SoundManager/FileSound, progress overlay, tooltips. ✅
 4. Datos: recipe, tag, jukebox_song, pack.mcmeta format 101. ✅
 5. Assets: texturas/modelos/lang/sounds.json copiados y corregidos. ✅
 6. Pruebas: build ✅, runServer ✅, runClient (no entorno gráfico), release ✅
@@ -45,7 +45,7 @@
 - `CreativeModeTabs.TOOLS_AND_UTILITIES` (field privado) → `ResourceKey.create(Registries.CREATIVE_MODE_TAB, id)` directamente
 - `owo.network.OwoNetChannel` → NeoForge `CustomPacketPayload` + `StreamCodec` + `RegisterPayloadHandlersEvent`
 - `owo.config @Config` → NeoForge `ModConfigSpec` + `ModContainer.registerConfig`
-- `owo.ui` → widgets vanilla (Button/EditBox/Slider)
+- `owo.ui` → widgets vanilla (Button/EditBox)
 - `@EventBusSubscriber` no tiene parámetro `bus()` en 26.1.2 → eliminado
 - `CompoundTag.getBoolean()` returns `Optional<Boolean>` → `.orElse(false)`
 - `FMLPaths` at `net.neoforged.fml.loading.FMLPaths`
@@ -53,7 +53,9 @@
 - `ByteBufCodecs.STRING_UTF8/INT/BOOL`, `BlockPos.STREAM_CODEC`
 - KeyMapping ctor: `(String name, int key, Category category)`
 - GuiGraphics → GuiGraphicsExtractor (MC 26.1.2)
+- `Screen.keyPressed(int,int,int)` → `Screen.keyPressed(KeyEvent)` (MC 26.1.2)
 - Client disconnect: `ClientPlayerNetworkEvent.LoggingOut` → `Executable.killAllProcesses()`
+- `ClientConfig` config screen: owo-config `@Modmenu` → NeoForge `ConfigScreen` (vanilla widgets, valores editables vía `ConfigValue.set()`)
 
 ## Log de cambios
 - 2026-10-31: Fase 0-5 completadas. Build, runServer, runData exitosos.
@@ -63,16 +65,18 @@
 - 2026-10-31: Desconexión cliente: `ClientPlayerNetworkEvent.LoggingOut` + `Executable.killAllProcesses()` en VinURLClient.
 - 2026-10-31: `./gradlew build` EXITOSO. Jar: build/libs/vinurl-2.6.0.jar.
 - 2026-10-31: `./gradlew runServer` puerto 25599 EXITOSO. Sin excepciones ni warnings de VinURL.
-
-- 2026-11-01: FIX GUI URL input length y falta de icono del mod en URLDiscScreen.
-  - `URLDiscScreen.urlField.setMaxLength(2048)`: permitía pegar URLs largas de YouTube (superan el límite por defecto de EditBox ~256 chars).
-  - `URLDiscScreen`: añadido `context.blit(ICON_ID, ...)` en `extractRenderState` para renderizar `assets/vinurl/icon.png` (48x48) a la izquierda de la pantalla.
-  - Build y runServer verificados sin errores.
-
-- 2026-11-01: FIX GUI no abriendo al click derecho en Custom Music Disc.
-  - `URLDisc.use()`: descomentado envío de `GUIRecord` via `PacketDistributor.sendToPlayer()` al jugador con URL y duración del custom data.
-  - `ClientEvent.handleGUIRecord()`: implementado — `context.enqueueWork(() -> Minecraft.getInstance().setScreen(new URLDiscScreen(url, duration)))`.
-  - `Network.java`: handlers client-bound movidos a `ClientNetwork.java` (`@EventBusSubscriber(value = Dist.CLIENT)`) para evitar `NoClassDefFoundError` de clases de cliente en servidor dedicado.
-  - Build y runServer verificados sin errores.
+- 2026-11-01: ccdb0fe — GUI abriendo al click derecho en Custom Music Disc (GUIRecord payload, ClientNetwork, screen open).
+- 2026-11-01: e2f418e — Fix URL input length y icono del mod en URLDiscScreen (setMaxLength 2048, context.blit icono).
+- 2026-11-01: FIX botones simulate/done de URLDiscScreen.
+  - Simulate: usa `urlField.getValue()` en lugar de `defaultUrl` (URL siempre actualizada). Almacena duración obtenida en campo `duration`. Feedback visual en el botón ("Calculating…" → "Duration: Ns"). Callbacks en hilo principal vía `VinURLClient.CLIENT.execute()`.
+  - Done: usa `duration` obtenida del simulate (no `defaultDuration`).
+  - `keyPressed(KeyEvent)`: ESC/ENTER envían el SetURLRecord y cierran la pantalla (paridad con original Fabric).
+- 2026-11-01: FIX comando /vinurl config.
+  - `Commands.openConfig`: implementado — abre `ConfigScreen` en hilo principal vía `CLIENT.execute(() -> CLIENT.setScreen(new ConfigScreen()))`.
+  - Nuevo `ConfigScreen`: pantalla vanilla con toggles para downloadEnabled/updatesOnStartup/showDescription, campo de texto para parameters, botón Done que guarda y cierra.
 
 ## Jar: build/libs/vinurl-2.6.0.jar
+
+## Próximos pasos (post-release)
+- Probar `./gradlew runClient` si se dispone de entorno gráfico.
+- Verificar `InGameHudMixin` en cliente con entorno gráfico.

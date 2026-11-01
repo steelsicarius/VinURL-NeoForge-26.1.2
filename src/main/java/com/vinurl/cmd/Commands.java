@@ -4,8 +4,8 @@ import com.mojang.brigadier.context.CommandContext;
 import com.vinurl.client.SoundManager;
 import com.vinurl.client.VinURLClient;
 import com.vinurl.exe.Executable;
+import com.vinurl.gui.ConfigScreen;
 import net.minecraft.commands.CommandSourceStack;
-import net.minecraft.commands.CommandBuildContext;
 import net.minecraft.network.chat.Component;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.neoforge.client.event.RegisterClientCommandsEvent;
@@ -13,7 +13,6 @@ import net.neoforged.fml.common.EventBusSubscriber;
 import org.apache.commons.io.FileUtils;
 
 import java.util.concurrent.CompletableFuture;
-
 import java.io.IOException;
 
 import static com.vinurl.client.VinURLClient.CLIENT;
@@ -59,7 +58,7 @@ public class Commands {
 	}
 
 	private static int openConfig(CommandContext<CommandSourceStack> ctx) {
-		// TODO: Open config screen via VinURLClient.CLIENT.setScreen(...)
+		CLIENT.execute(() -> CLIENT.setScreen(new ConfigScreen()));
 		return 1;
 	}
 }
