@@ -2,7 +2,6 @@ package com.vinurl.cmd;
 
 import com.mojang.brigadier.context.CommandContext;
 import com.vinurl.client.SoundManager;
-import com.vinurl.client.VinURLClient;
 import com.vinurl.exe.Executable;
 import com.vinurl.gui.ConfigScreen;
 import net.minecraft.client.Minecraft;
