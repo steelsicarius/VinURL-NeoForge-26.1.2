@@ -12,16 +12,8 @@ import org.apache.commons.codec.digest.DigestUtils;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.filefilter.TrueFileFilter;
 
-import javax.sound.sampled.AudioFormat;
-import javax.sound.sampled.AudioInputStream;
-import javax.sound.sampled.AudioSystem;
-import javax.sound.sampled.UnsupportedAudioFileException;
-import java.io.ByteArrayInputStream;
-import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
-import java.io.InputStream;
-import java.nio.ByteBuffer;
 import java.nio.file.Path;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -72,35 +64,8 @@ public class SoundManager {
 			.onComplete(() -> {
 				ProgressOverlay.stop(fileName);
 				setDescription(fileName);
-				// Convert Ogg to WAV for JavaSound playback
-				convertToWav(fileName);
 			})
 			.start();
-	}
-
-	private static void convertToWav(String fileName) {
-		File oggFile = getAudioFile(fileName);
-		File wavFile = getWavFile(fileName);
-		if (!oggFile.exists()) {return;}
-		if (wavFile.exists()) {return;}
-
-		try {
-			Process process = new ProcessBuilder()
-				.command(
-					Executable.FFMPEG.FILE_PATH.toString(),
-					"-y", "-i", oggFile.getAbsolutePath(),
-					"-ac", "1", "-ar", "44100", "-sample_fmt", "s16",
-					wavFile.getAbsolutePath()
-				)
-				.redirectErrorStream(true)
-				.start();
-			int exitCode = process.waitFor();
-			if (exitCode != 0) {
-				LOGGER.error("ffmpeg conversion failed for {} with code {}", fileName, exitCode);
-			}
-		} catch (IOException | InterruptedException e) {
-			LOGGER.error("Failed to convert {} to WAV", fileName, e);
-		}
 	}
 
 	public static void deleteSound(String fileName) {
@@ -147,6 +112,10 @@ public class SoundManager {
 		if (processStream != null) {
 			processStream.subscribe(Objects.toString(fileSound.position))
 				.onComplete(() -> playSound(fileSound)).start();
+		} else if (getAudioFile(fileSound.fileName).exists()) {
+			// Process finished and was deregistered between handlePlaySound's check and here;
+			// download completed successfully -> play immediately instead of staying silent
+			playSound(fileSound);
 		}
 	}
 
@@ -202,46 +171,8 @@ public class SoundManager {
 		return AUDIO_DIRECTORY.resolve(fileName + ".ogg").toFile();
 	}
 
-	public static File getWavFile(String fileName) {
-		return AUDIO_DIRECTORY.resolve(fileName + ".wav").toFile();
-	}
-
 	public static String getFileName(String url) {
 		return (url == null || url.isEmpty()) ? "" : DigestUtils.sha256Hex(url);
 	}
 
-	/**
-	 * AudioStream implementation that reads PCM data from a WAV file using JavaSound.
-	 */
-	public static final class WavAudioStream implements net.minecraft.client.sounds.AudioStream {
-		private final AudioInputStream inputStream;
-		private boolean closed;
-
-		public WavAudioStream(File file) throws IOException, UnsupportedAudioFileException {
-			this.inputStream = AudioSystem.getAudioInputStream(file);
-		}
-
-		@Override
-		public AudioFormat getFormat() {
-			return inputStream.getFormat();
-		}
-
-		@Override
-		public ByteBuffer read(int length) throws IOException {
-			if (closed) return null;
-			byte[] bytes = new byte[length];
-			int read = inputStream.read(bytes);
-			if (read < 0) {
-				closed = true;
-				return null;
-			}
-			return ByteBuffer.wrap(bytes, 0, read);
-		}
-
-		@Override
-		public void close() throws IOException {
-			closed = true;
-			inputStream.close();
-		}
-	}
 }

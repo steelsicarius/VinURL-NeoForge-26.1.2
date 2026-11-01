@@ -2,6 +2,10 @@
 
 All notable changes to the NeoForge 26.1.2 port. The original Fabric mod's history is in the upstream CHANGELOG.md.
 
+## Version: 2.6.2
+- bugfix: VinURL discs now produce sound — the downloaded `.ogg` is streamed directly with vanilla `JOrbisAudioStream` (origin parity). The previous ffmpeg `.ogg → .wav` conversion could fail or lose the race against playback, and the resulting failed future was swallowed silently by `SoundEngine` (no audio, no error). Removed the WAV conversion path entirely.
+- enhancement: `queueSound` plays immediately if the download process already finished between the running-check and playback subscription (race fallback)
+
 ## Version: 2.6.1
 - port: NeoForge 26.1.2 port of VinURL 2.6.0 (Fabric 26.1), full content parity
 - bugfix: mod icon now renders in the disc screen (26.1.2 resolves `blit()` identifiers as direct resource paths; id must include `textures/` and the `.png` extension) and in the mods list (`logoFile` resolves from the jar root)

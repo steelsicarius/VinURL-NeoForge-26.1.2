@@ -9,6 +9,33 @@
 - **runClient**: NOT TESTED — LWJGL platform mismatch (aarch64 JVM, x64 natives only)
 - **User must replace** the old `vinurl-2.6.0.jar` in their mods folder with `vinurl-2.6.1.jar`
 
+## Issues Fixed — 2.6.2 Session (user report: disc inserts but no sound; downloads + vanilla discs fine)
+
+### No audio from VinURL discs (files download correctly to .minecraft/vinurl)
+**Root cause**: `FileSound.getStream()` required a WAV previously produced by an external ffmpeg
+conversion (`SoundManager.convertToWav`), and if the WAV was missing (conversion failed on the user's
+machine, or `queueSound`'s onComplete fired `playSound` BEFORE the blocking conversion finished),
+`getStream()` returned a **failed future**. `SoundEngine.play()` consumes that future only via
+`thenAccept(...)` — a failed future is swallowed silently → **no sound, no error in the log**.
+(Also verified: `SoundEngine.play()` only calls `SoundInstance.getStream()` when the resolved
+`Sound` entry has `stream: true` — `isStreaming = sound.shouldStream()`; otherwise it plays the
+sound entry's own file via `getCompleteBuffer`, bypassing the hook. Our sounds.json sets
+`"stream": true` on the placeholder event, so the hook path is correct.)
+
+**Fix**: play the downloaded `.ogg` directly — exactly what the Fabric original did:
+`FileSound.getStream()` → `SkippableAudioStream.offset(new JOrbisAudioStream(new FileInputStream(ogg)), elapsed)`
+on `Util.nonCriticalIoPool()`. `JOrbisAudioStream` is a vanilla class (implements `AudioStream` via
+`FloatSampleSource`); `org.jcraft:jorbis` is a vanilla launcher library. Removed `convertToWav`,
+`getWavFile`, `WavAudioStream` (dead code after this change) — ffmpeg is now only needed for
+yt-dlp's audio postprocessing, not for playback.
+Also added a fallback in `SoundManager.queueSound()`: if the download process was already
+deregistered (race between `isProcessRunning` and `getProcessStream`) but the file exists, play
+immediately instead of staying silent.
+
+**Files**: `FileSound.java`, `SoundManager.java`
+
+**Version bumped to 2.6.2** so the user can distinguish the jar.
+
 ## Issues Fixed — 2.6.1 Session (user-reported bugs from logs/)
 
 ### 1. Download / Simulate stuck forever ("Downloading 1/1", "Calculating...")

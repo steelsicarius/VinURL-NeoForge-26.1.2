@@ -45,7 +45,7 @@ This is a NeoForge port of the original Fabric mod. Key changes from the origina
 - **GUI**: owo-ui → Vanilla Minecraft widgets
 - **Mod ID**: `vinurl` (unchanged)
 - **Package**: `com.vinurl` (unchanged)
-- **Jar**: `vinurl-2.6.1.jar`
+- **Jar**: `vinurl-2.6.2.jar`
 
 ### Fixes in 2.6.1 (post-port bugfix release)
 
@@ -53,7 +53,11 @@ This is a NeoForge port of the original Fabric mod. Key changes from the origina
 - **Download/Simulate never finishing**: `commons-exec` was missing from the production jar (`runtimeOnly` does not package dependencies). It is now shaded into the jar via the `jar` task.
 - **Config resetting on restart**: (1) `ConfigValue.set()` in NeoForge 26.1.2 only updates memory — every `set()` is now followed by `save()`. (2) `urlWhitelist` was declared with `define(path, Collections.emptyList())`, whose validator rejects the `ArrayList` read back from the TOML file, so the config loader reset it on every startup — now declared with `defineListAllowEmpty(..., o -> o instanceof String)`.
 - **Silent placeholder sound**: `sounds.json` referenced `vinurl:placeholder_sound` without an audio file. Added a 1-second silent OGG (`assets/vinurl/sounds/placeholder_sound.ogg`), matching the Fabric original's use of `fabric-sound-api-v1:empty`. Without a real file, `SoundEngine.play()` aborts with `EMPTY_SOUND` before the custom `getStream()` is ever called — no audio would play even after a successful download.
-- **Client mixin on dedicated server**: `InGameHudMixin` moved from `mixins` to the `client` section of `vinurl.mixins.json` (removes the `Attempted to load class net.minecraft.client.gui.Gui` error on dedicated servers).
+- `InGameHudMixin` moved to the `client` section of `vinurl.mixins.json` (removes the `Attempted to load class net.minecraft.client.gui.Gui` error on dedicated servers).
+
+## Fixes in 2.6.2
+
+- **No sound from VinURL discs**: `FileSound` now plays the downloaded `.ogg` directly with vanilla `JOrbisAudioStream` (origin parity). The previous approach (external ffmpeg `.ogg → .wav` conversion + JavaSound) returned a failed future that `SoundEngine` swallows silently whenever the WAV was missing or lost the race against playback — resulting in total silence. ffmpeg is now only needed for yt-dlp's own audio postprocessing, not for playback.
 
 ## Mixins
 
