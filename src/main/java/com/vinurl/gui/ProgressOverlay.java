@@ -1,13 +1,12 @@
 package com.vinurl.gui;
 
 import net.minecraft.ChatFormatting;
+import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.network.chat.Component;
 import net.minecraft.util.CommonColors;
 
 import java.util.LinkedHashMap;
-
-import static com.vinurl.client.VinURLClient.CLIENT;
 
 public class ProgressOverlay {
 	private static final int BAR_SIZE = 20;
@@ -69,9 +68,9 @@ public class ProgressOverlay {
 	}
 
 	private static void renderText(GuiGraphicsExtractor context, Component text, int offset) {
-		context.text(CLIENT.font, text,
-			(CLIENT.getWindow().getGuiScaledWidth() - CLIENT.font.width(text)) / 2,
-			(CLIENT.getWindow().getGuiScaledHeight() - offset),
+		context.text(Minecraft.getInstance().font, text,
+			(Minecraft.getInstance().getWindow().getGuiScaledWidth() - Minecraft.getInstance().font.width(text)) / 2,
+			(Minecraft.getInstance().getWindow().getGuiScaledHeight() - offset),
 			CommonColors.WHITE);
 	}
 }

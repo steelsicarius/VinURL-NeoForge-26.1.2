@@ -5,6 +5,7 @@ import com.jcraft.jorbis.VorbisFile;
 import com.vinurl.exe.Executable;
 import com.vinurl.exe.ProcessStream;
 import com.vinurl.gui.ProgressOverlay;
+import net.minecraft.client.Minecraft;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
 import org.apache.commons.codec.digest.DigestUtils;
@@ -19,7 +20,6 @@ import java.util.HashSet;
 import java.util.Objects;
 import java.util.stream.Stream;
 
-import static com.vinurl.client.VinURLClient.CLIENT;
 import static com.vinurl.util.Constants.LOGGER;
 import static com.vinurl.util.Constants.VINURLPATH;
 
@@ -94,14 +94,14 @@ public class SoundManager {
 
 	public static void playSound(FileSound fileSound) {
 		if (fileSound == null) {return;}
-		CLIENT.getSoundManager().play(fileSound);
-		CLIENT.gui.setNowPlaying(Component.literal(getDescription(fileSound.fileName)));
+		Minecraft.getInstance().getSoundManager().play(fileSound);
+		Minecraft.getInstance().gui.setNowPlaying(Component.literal(getDescription(fileSound.fileName)));
 	}
 
 	public static void stopSound(FileSound fileSound) {
 		if (fileSound == null) {return;}
 		playingSounds.remove(fileSound);
-		CLIENT.getSoundManager().stop(fileSound);
+		Minecraft.getInstance().getSoundManager().stop(fileSound);
 	}
 
 	public static void queueSound(FileSound fileSound) {

@@ -92,9 +92,13 @@ configurations {
 
 dependencies {
     // Commons-exec from Fabric origin (yt-dlp/ffmpeg/deno download helpers)
-    implementation "org.apache.commons:commons-exec:1.6.0"
+    // compileOnly for compilation (used in public method signatures)
+    // runtimeOnly for NeoForge ModuleClassLoader visibility at runtime
+    compileOnly "org.apache.commons:commons-exec:1.6.0"
+    runtimeOnly "org.apache.commons:commons-exec:1.6.0"
     // JNA used by Platform.exe for OS detection (was transitive via fabric-api)
-    implementation "net.java.dev.jna:jna:5.14.0"
+    compileOnly "net.java.dev.jna:jna:5.14.0"
+    runtimeOnly "net.java.dev.jna:jna:5.14.0"
     // Mixin annotations (compileOnly - annotation processor can't access deobfuscated MC classes in this env;
     // mixins load at runtime via [[mixins]] in neoforge.mods.toml - see PORTING.md)
     compileOnly "org.spongepowered:mixin:0.8.5"

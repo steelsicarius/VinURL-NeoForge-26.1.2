@@ -5,6 +5,7 @@ import com.vinurl.client.VinURLClient;
 import com.vinurl.exe.Executable;
 import com.vinurl.net.Payloads;
 import com.vinurl.util.Constants;
+import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.components.EditBox;
@@ -80,11 +81,11 @@ public class URLDiscScreen extends Screen {
 						if ("DURATION:".equals(type)) {
 							try {
 								duration = Integer.parseInt(message);
-								VinURLClient.CLIENT.execute(() -> {
+								Minecraft.getInstance().execute(() -> {
 									button.setMessage(Component.literal("Duration: " + duration + "s"));
 								});
 							} catch (NumberFormatException e) {
-								VinURLClient.CLIENT.execute(() -> {
+								Minecraft.getInstance().execute(() -> {
 									button.setMessage(Component.literal("Simulate"));
 								});
 							}
@@ -92,13 +93,13 @@ public class URLDiscScreen extends Screen {
 					})
 					.onError((error) -> {
 						simulate = false;
-						VinURLClient.CLIENT.execute(() -> {
+						Minecraft.getInstance().execute(() -> {
 							button.setMessage(Component.literal("Simulate"));
 						});
 					})
 					.onComplete(() -> {
 						simulate = false;
-						VinURLClient.CLIENT.execute(() -> {
+						Minecraft.getInstance().execute(() -> {
 							button.setMessage(Component.literal("Simulate"));
 						});
 					})
@@ -113,7 +114,7 @@ public class URLDiscScreen extends Screen {
 			(button) -> {
 				String url = urlField.getValue();
 				Payloads.SetURLRecord payload = new Payloads.SetURLRecord(url, duration, lock);
-				VinURLClient.CLIENT.getConnection().send(new ServerboundCustomPayloadPacket(payload));
+				Minecraft.getInstance().getConnection().send(new ServerboundCustomPayloadPacket(payload));
 				this.onClose();
 			}
 		).bounds(width / 2 - 50, height / 2 + 30, 100, 20).build();
@@ -137,7 +138,7 @@ public class URLDiscScreen extends Screen {
 		if (event.key() == 256 || event.key() == 257) { // GLFW_KEY_ESCAPE or GLFW_KEY_ENTER
 			String url = urlField.getValue();
 			Payloads.SetURLRecord payload = new Payloads.SetURLRecord(url, duration, lock);
-			VinURLClient.CLIENT.getConnection().send(new ServerboundCustomPayloadPacket(payload));
+			Minecraft.getInstance().getConnection().send(new ServerboundCustomPayloadPacket(payload));
 			this.onClose();
 			return true;
 		}

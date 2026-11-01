@@ -1,82 +1,72 @@
-# PORTING.md — VinURL: Fabric 26.1 → NeoForge 26.1.2
+# VinURL Porting to NeoForge MC 26.1.2
 
-> Memoria de trabajo. Leer SIEMPRE al empezar o retomar la sesión. Actualizar tras cada cambio de fase.
+## Current Status
+- **Phase**: Bugfix / Release candidate
+- **Commit**: eb0f1fc, tag v2.6.0-mc26.1.2-release
+- **Build**: PASSING
+- **runServer (port 25599)**: PASSING
+- **Known issues (this session)**: config NPE, simulate ClassNotFoundException, Done/ESC NPE — all root cause identified
 
-## Estado actual
-**Todas las fases completadas. Release listo.**
+## Issues Found & Fixed (this session)
 
-## Inventario del mod origen (VinURL 2.6.0, MC 26.1, Fabric)
-- Mod id: `vinurl`, paquete: `com.vinurl`, versión: `2.6.0` (+mc26.1.2)
-- Item: `vinurl:custom_record` (URLDisc, RARA, stack 1, jukeboxPlayable(SONG_KEY), setId(ITEM_KEY))
-- Sound event: `vinurl:placeholder_sound` (variable range)
-- Jukebox song (data): `vinurl:placeholder_sound` (length 3600s, comparator 15, desc translatable)
-- Tag: `minecraft:music_discs` → vinurl:custom_record
-- Recipe: `data/vinurl/recipe/custom_record.json` (shapeless: note_block + 8 colores de lana)
-- Creative tab: se añade a `TOOLS_AND_UTILITIES`
-- Mixins: `JukeboxMixin` (JukeboxBlockEntity: setTheItem/popOutTheItem/tick), `InGameHudMixin` (Gui.setNowPlaying)
-- Red (NeoForge CustomPacketPayload): PlaySoundRecord, StopSoundRecord, GUIRecord (clientbound), SetURLRecord (serverbound)
-- Cliente: KeyListener (tecla Y), Commands (/vinurl delete|update|config, cliente), SoundManager (yt-dlp/ffmpeg/deno vía commons-exec), FileSound, SkippableAudioStream, ClientConfig (ModConfigSpec), URLDiscScreen (widgets vanilla), ConfigScreen (vanilla), ProgressOverlay (RenderGuiEvent), VinURLClient
-- Commons: Executable, Platform (jna), ProcessStream, Util.Url, Constants
-- Dependencias: commons-exec 1.6.0, jna 5.14.0, mixin 0.8.5
-- Assets: icon, lang en_us, item model, textures, 9 nine_patch jsons, sounds.json (placeholder_sound → vinurl:placeholder_sound)
-- pack.mcmeta: recursos y datos, format 101
+### 1. `VinURLClient.CLIENT` is null → NullPointerException
+**Root cause**: `public static final Minecraft CLIENT = Minecraft.getInstance();` is a static field initialized at class-load time. `Minecraft.getInstance()` returns null if Minecraft isn't fully initialized yet when the class is loaded.
 
-## Plan de fases (todas completadas)
-0. Esqueleto: build.gradle, gradle.properties, settings.gradle, neoforge.mods.toml, mod id, paquete. ✅
-1. Registros: item, sound event, creative tab, tags/recipe/jukebox_song (datos). ✅
-2. Lógica: URLDisc item, VinURLSound, ServerEvent/ClientEvent red, mixins, Executable suite. ✅
-3. Cliente: keybinding, client commands, client config, URLDiscScreen (vanilla widgets), ConfigScreen (vanilla), SoundManager/FileSound, progress overlay, tooltips. ✅
-4. Datos: recipe, tag, jukebox_song, pack.mcmeta format 101. ✅
-5. Assets: texturas/modelos/lang/sounds.json copiados y corregidos. ✅
-6. Pruebas: build ✅, runServer ✅, runClient (no entorno gráfico), release ✅
+**Affected files**:
+- `URLDiscScreen.java` — uses `VinURLClient.CLIENT.execute()` and `VinURLClient.CLIENT.getConnection()` in Done button and keyPressed(ESC/ENTER)
+- `Commands.java` — uses `CLIENT.execute()` and `CLIENT.setScreen()` in openConfig
+- `ProgressOverlay.java` — uses `CLIENT.font`, `CLIENT.getWindow()`
+- `SoundManager.java` — uses `CLIENT.getSoundManager()`, `CLIENT.gui`
 
-## Decisiones de diseño (tomadas)
-- Versiones NeoForge/MC/plugin moddev: copiar del MDK (mc 26.1.2, neo 26.1.2.114, moddev 2.0.148).
-- build.gradle: versión `2.6.0`, jar `vinurl-2.6.0.jar`.
-- Paquete base y mod id: se mantienen (`com.vinurl`, `vinurl`) para paridad de IDs de registros y recursos.
-- Dependencias: no añadir nada que el origen no tuviera; commons-exec/jna se declaran explícitamente.
-- owo-lib: NO tiene variante NeoForge → reemplazado por CustomPacketPayload + ModConfigSpec + widgets vanilla.
-- Sounds: fabric-sound-api-v1:empty no usable → vinurl:placeholder_sound (auto-referencia).
-- Mixins: annotation processor no puede acceder a clases deMC deobfuscadas en este entorno; mixins cargan en runtime vía `[[mixins]]` en neoforge.mods.toml. JukeboxMixin verificado activo en servidor. InGameHudMixin (cliente) no probado (sin entorno gráfico).
-- mixins.json compatibilityLevel: JAVA_13 (mixin 0.8.7 max soportado; JAVA_25 causaba warning).
+**Fix**: Replace all `VinURLClient.CLIENT` / `CLIENT` usages with `Minecraft.getInstance()` called at the point of use. Remove the static `CLIENT` field from `VinURLClient.java`.
 
-## Cambios de API confirmados
-- Fabric `Registry.register()` → NeoForge `DeferredRegister` + `DeferredHolder.get()`
-- `CreativeModeTabs.TOOLS_AND_UTILITIES` (field privado) → `ResourceKey.create(Registries.CREATIVE_MODE_TAB, id)` directamente
-- `owo.network.OwoNetChannel` → NeoForge `CustomPacketPayload` + `StreamCodec` + `RegisterPayloadHandlersEvent`
-- `owo.config @Config` → NeoForge `ModConfigSpec` + `ModContainer.registerConfig`
-- `owo.ui` → widgets vanilla (Button/EditBox)
-- `@EventBusSubscriber` no tiene parámetro `bus()` en 26.1.2 → eliminado
-- `CompoundTag.getBoolean()` returns `Optional<Boolean>` → `.orElse(false)`
-- `FMLPaths` at `net.neoforged.fml.loading.FMLPaths`
-- `CustomPacketPayload` requiere método `type()` retornando `CustomPacketPayload.Type<?>`
-- `ByteBufCodecs.STRING_UTF8/INT/BOOL`, `BlockPos.STREAM_CODEC`
-- KeyMapping ctor: `(String name, int key, Category category)`
-- GuiGraphics → GuiGraphicsExtractor (MC 26.1.2)
-- `Screen.keyPressed(int,int,int)` → `Screen.keyPressed(KeyEvent)` (MC 26.1.2)
-- Client disconnect: `ClientPlayerNetworkEvent.LoggingOut` → `Executable.killAllProcesses()`
-- `ClientConfig` config screen: owo-config `@Modmenu` → NeoForge `ConfigScreen` (vanilla widgets, valores editables vía `ConfigValue.set()`)
+**API change**: None (Fabric also used `Minecraft.getInstance()` via static field; NeoForge requires calling it lazily at point of use).
 
-## Log de cambios
-- 2026-10-31: Fase 0-5 completadas. Build, runServer, runData exitosos.
-- 2026-10-31: Commit bdf4bcd, tag v2.6.0-mc26.1.2.
-- 2026-10-31: Mixins activados en runtime vía `[[mixins]]` en mods.toml (sin annotation processor). JukeboxMixin verificado en servidor.
-- 2026-10-31: mixins.json compatibilityLevel JAVA_25 → JAVA_13 (eliminar warning).
-- 2026-10-31: Desconexión cliente: `ClientPlayerNetworkEvent.LoggingOut` + `Executable.killAllProcesses()` en VinURLClient.
-- 2026-10-31: `./gradlew build` EXITOSO. Jar: build/libs/vinurl-2.6.0.jar.
-- 2026-10-31: `./gradlew runServer` puerto 25599 EXITOSO. Sin excepciones ni warnings de VinURL.
-- 2026-11-01: ccdb0fe — GUI abriendo al click derecho en Custom Music Disc (GUIRecord payload, ClientNetwork, screen open).
-- 2026-11-01: e2f418e — Fix URL input length y icono del mod en URLDiscScreen (setMaxLength 2048, context.blit icono).
-- 2026-11-01: FIX botones simulate/done de URLDiscScreen.
-  - Simulate: usa `urlField.getValue()` en lugar de `defaultUrl` (URL siempre actualizada). Almacena duración obtenida en campo `duration`. Feedback visual en el botón ("Calculating…" → "Duration: Ns"). Callbacks en hilo principal vía `VinURLClient.CLIENT.execute()`.
-  - Done: usa `duration` obtenida del simulate (no `defaultDuration`).
-  - `keyPressed(KeyEvent)`: ESC/ENTER envían el SetURLRecord y cierran la pantalla (paridad con original Fabric).
-- 2026-11-01: FIX comando /vinurl config.
-  - `Commands.openConfig`: implementado — abre `ConfigScreen` en hilo principal vía `CLIENT.execute(() -> CLIENT.setScreen(new ConfigScreen()))`.
-  - Nuevo `ConfigScreen`: pantalla vanilla con toggles para downloadEnabled/updatesOnStartup/showDescription, campo de texto para parameters, botón Done que guarda y cierra.
+### 2. commons-exec ClassNotFoundException
+**Root cause**: `implementation "org.apache.commons:commons-exec:1.6.0"` in build.gradle doesn't make the dependency visible to NeoForge's `ModuleClassLoader` at runtime. NeoForge isolates mod classloaders; `implementation` is compile-time only, `runtimeOnly` is needed for runtime visibility.
 
-## Jar: build/libs/vinurl-2.6.0.jar
+**Affected**: `URLDiscScreen.simulate` button — calls `Executable.YT_DLP.getCommandLine()` → `new CommandLine(FILE_PATH)` → ClassNotFoundException.
 
-## Próximos pasos (post-release)
-- Probar `./gradlew runClient` si se dispone de entorno gráfico.
-- Verificar `InGameHudMixin` en cliente con entorno gráfico.
+**Fix**: Change `implementation` → `runtimeOnly` for `commons-exec` and `jna` in build.gradle.
+
+### 3. Simulate button doesn't advance / no sound
+**Root cause**: Same as #2 — commons-exec not found, so the yt-dlp duration check never runs.
+
+**Fix**: Fix #2.
+
+### 4. Done button does nothing
+**Root cause**: Same as #1 — NPE on `VinURLClient.CLIENT.getConnection()`.
+
+**Fix**: Fix #1.
+
+### 5. ESC key doesn't exit menu
+**Root cause**: Same as #1 — NPE on `VinURLClient.CLIENT.getConnection()` before `onClose()` is reached.
+
+**Fix**: Fix #1.
+
+## API Changes Found (Fabric → NeoForge MC 26.1.2)
+
+| Fabric (26.1) | NeoForge (26.1.2) |
+|---|---|
+| `owo-network` `NETWORK_CHANNEL.clientHandle().send()` | `Minecraft.getInstance().getConnection().send(ServerboundCustomPayloadPacket)` |
+| `owo-config` `ConfigScreen.create()` | Manual vanilla `Screen` with `ModConfigSpec.ConfigValue.set()` |
+| `Screen.keyPressed(int,int,int)` | `Screen.keyPressed(KeyEvent)` |
+| `Screen.render(GuiGraphics,int,int,float)` | `Screen.extractRenderState(GuiGraphicsExtractor,int,int,float)` |
+| `BaseUIModelScreen` (owo-ui) | Vanilla `Screen` + `Button.builder` + `EditBox` |
+| `GLFW.GLFW_KEY_ESCAPE` | `KeyEvent.key() == 256` |
+| `CompoundTag.getBoolean()` returns boolean | Returns `Optional<Boolean>`, use `.orElse(false)` |
+| `CreativeModeTabs.TOOLS_AND_UTILITIES` (public) | Construct `ResourceKey` directly |
+| `fabric-api` mixin annotation processor | Mixins load at runtime via `[[mixins]]` in `neoforge.mods.toml` |
+
+## Pending Tasks
+- [ ] Apply fixes for issues #1-#5 above
+- [ ] Rebuild and verify `./gradlew build` passes
+- [ ] Test `./gradlew runServer` on port 25599
+- [ ] Test `./gradlew runClient` (if graphical environment available)
+- [ ] Final commit and tag
+
+## Design Decisions
+- Replaced owo-lib with NeoForge `CustomPacketPayload`/`StreamCodec` + `ModConfigSpec` + vanilla widgets (owo-lib has no NeoForge variant)
+- Client config registered via `ModLoadingContext.get().getActiveContainer().registerConfig(ModConfig.Type.CLIENT, ClientConfig.SPEC)`
+- Mixins loaded at runtime via `[[mixins]]` in `neoforge.mods.toml` (annotation processor can't access deobfuscated MC classes)
+- `commons-exec` and `jna` kept as direct dependencies (same as Fabric origin)

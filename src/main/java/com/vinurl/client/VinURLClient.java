@@ -4,7 +4,6 @@ import com.vinurl.exe.Executable;
 import com.vinurl.gui.ProgressOverlay;
 import com.vinurl.item.URLDisc;
 import net.minecraft.ChatFormatting;
-import net.minecraft.client.Minecraft;
 import net.minecraft.core.component.DataComponents;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.chat.Component;
@@ -22,7 +21,6 @@ import static com.vinurl.VinURL.CUSTOM_RECORD;
 @EventBusSubscriber(modid = com.vinurl.util.Constants.MOD_ID, value = net.neoforged.api.distmarker.Dist.CLIENT)
 public class VinURLClient {
 	public static final ClientConfig CONFIG = new ClientConfig();
-	public static final Minecraft CLIENT = Minecraft.getInstance();
 
 	@SubscribeEvent
 	public static void onClientDisconnect(ClientPlayerNetworkEvent.LoggingOut event) {

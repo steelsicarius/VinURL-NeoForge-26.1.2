@@ -5,6 +5,7 @@ import com.vinurl.client.SoundManager;
 import com.vinurl.client.VinURLClient;
 import com.vinurl.exe.Executable;
 import com.vinurl.gui.ConfigScreen;
+import net.minecraft.client.Minecraft;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.network.chat.Component;
 import net.neoforged.bus.api.SubscribeEvent;
@@ -15,7 +16,6 @@ import org.apache.commons.io.FileUtils;
 import java.util.concurrent.CompletableFuture;
 import java.io.IOException;
 
-import static com.vinurl.client.VinURLClient.CLIENT;
 import static com.vinurl.util.Constants.MOD_ID;
 
 @EventBusSubscriber(modid = MOD_ID, value = net.neoforged.api.distmarker.Dist.CLIENT)
@@ -58,7 +58,7 @@ public class Commands {
 	}
 
 	private static int openConfig(CommandContext<CommandSourceStack> ctx) {
-		CLIENT.execute(() -> CLIENT.setScreen(new ConfigScreen()));
+		Minecraft.getInstance().execute(() -> Minecraft.getInstance().setScreen(new ConfigScreen()));
 		return 1;
 	}
 }
