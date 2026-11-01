@@ -1,5 +1,6 @@
 package com.vinurl.net;
 
+import com.vinurl.client.ClientConfig;
 import com.vinurl.client.FileSound;
 import com.vinurl.client.KeyListener;
 import com.vinurl.client.SoundManager;
@@ -65,7 +66,11 @@ public class ClientEvent {
 
 		KeyListener.waitForKeyPress().thenAccept((confirmed) -> {
 			if (confirmed) {
-				CONFIG.urlWhitelist().add(baseUrl.toString());
+				// Persist whitelist change in ModConfigSpec (must call set() to save to disk)
+				var current = ClientConfig.URL_WHITELIST.get();
+				var updated = new java.util.ArrayList<>(current);
+				updated.add(baseUrl.toString());
+				ClientConfig.URL_WHITELIST.set(updated);
 				SoundManager.downloadSound(url.toString(), fileName);
 				SoundManager.queueSound(fileSound);
 			}

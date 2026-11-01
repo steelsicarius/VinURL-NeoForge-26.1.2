@@ -47,6 +47,6 @@ public class KeyListener {
 	}
 
 	public static String getHotKey() {
-		return acceptKey != null ? acceptKey.getName() : "Y";
+		return acceptKey != null ? acceptKey.getTranslatedKeyMessage().getString() : "Y";
 	}
 }
