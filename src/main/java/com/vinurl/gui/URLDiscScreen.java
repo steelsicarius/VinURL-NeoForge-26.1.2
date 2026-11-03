@@ -7,6 +7,7 @@ import com.vinurl.net.Payloads;
 import com.vinurl.util.Constants;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
+import net.minecraft.client.gui.components.AbstractSliderButton;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.client.gui.screens.Screen;
@@ -22,6 +23,7 @@ public class URLDiscScreen extends Screen {
 	private Button lockButton;
 	private Button simulateButton;
 	private Button doneButton;
+	private DurationSlider durationSlider;
 	private boolean lock;
 	private boolean simulate;
 	private int duration;
@@ -45,21 +47,23 @@ public class URLDiscScreen extends Screen {
 
 		int width = this.width;
 		int height = this.height;
+		int centerX = width / 2;
+		int centerY = height / 2;
 
 		// URL text field
-		this.urlField = new EditBox(this.font, width / 2 - 150, height / 2 - 40, 300, 20, Component.literal("URL"));
+		this.urlField = new EditBox(this.font, centerX - 150, centerY - 50, 300, 20, Component.literal("URL"));
 		this.urlField.setMaxLength(2048);
 		this.urlField.setValue(defaultUrl);
 		this.addRenderableWidget(this.urlField);
 
-		// Lock button
+		// Lock button (toggle, shows 🔓/🔒)
 		this.lockButton = Button.builder(
 			Component.literal("🔓"),
 			(button) -> {
 				lock = !lock;
 				button.setMessage(Component.literal(lock ? "🔒" : "🔓"));
 			}
-		).bounds(width / 2 - 150, height / 2 - 10, 60, 20).build();
+		).bounds(centerX - 150, centerY - 20, 40, 20).build();
 		this.addRenderableWidget(this.lockButton);
 
 		// Simulate button
@@ -101,6 +105,7 @@ public class URLDiscScreen extends Screen {
 						if ("DURATION:".equals(type)) {
 							try {
 								duration = Integer.parseInt(message);
+								durationSlider.setSliderValue((double) duration / 3600.0);
 								Minecraft.getInstance().execute(() -> {
 									button.setMessage(Component.literal("Duration: " + duration + "s"));
 								});
@@ -125,8 +130,12 @@ public class URLDiscScreen extends Screen {
 					})
 				.start();
 			}
-		).bounds(width / 2 + 90, height / 2 - 10, 100, 20).build();
+		).bounds(centerX + 110, centerY - 20, 100, 20).build();
 		this.addRenderableWidget(this.simulateButton);
+
+		// Duration slider (0-3600 seconds)
+		this.durationSlider = new DurationSlider(centerX - 150, centerY + 10, 300, 20);
+		this.addRenderableWidget(this.durationSlider);
 
 		// Done button
 		this.doneButton = Button.builder(
@@ -137,21 +146,21 @@ public class URLDiscScreen extends Screen {
 				Minecraft.getInstance().getConnection().send(new ServerboundCustomPayloadPacket(payload));
 				this.onClose();
 			}
-		).bounds(width / 2 - 50, height / 2 + 30, 100, 20).build();
+		).bounds(centerX - 50, centerY + 45, 100, 20).build();
 		this.addRenderableWidget(this.doneButton);
 	}
 
 	@Override
 	public void extractRenderState(GuiGraphicsExtractor context, int mouseX, int mouseY, float delta) {
 		super.extractRenderState(context, mouseX, mouseY, delta);
-		// Mod icon on the left
+		// Mod icon on the left (like Fabric version)
 		int iconSize = 48;
-		int iconX = this.width / 2 - 190;
+		int iconX = this.width / 2 - 200;
 		int iconY = this.height / 2 - iconSize / 2;
 		// GuiGraphicsExtractor.blit takes x0,y0,x1,y1 (corners), not x,y,width,height
 		context.blit(ICON_ID, iconX, iconY, iconX + iconSize, iconY + iconSize, 0.0f, 1.0f, 0.0f, 1.0f);
-		context.centeredText(this.font, Component.literal("VinURL Disc"), this.width / 2, this.height / 2 - 60, 0xFFFFFF);
-		context.text(this.font, Component.literal("URL:"), this.width / 2 - 160, this.height / 2 - 37, 0xAAAAAA);
+		context.centeredText(this.font, Component.literal("VinURL Disc"), this.width / 2, this.height / 2 - 70, 0xFFFFFF);
+		context.text(this.font, Component.literal("URL:"), this.width / 2 - 170, this.height / 2 - 47, 0xAAAAAA);
 	}
 
 	@Override
@@ -169,5 +178,26 @@ public class URLDiscScreen extends Screen {
 	@Override
 	public boolean isPauseScreen() {
 		return false;
+	}
+
+	// Slider subclass with public setSliderValue to update position from simulate callback
+	private class DurationSlider extends AbstractSliderButton {
+		public DurationSlider(int x, int y, int width, int height) {
+			super(x, y, width, height, Component.literal("Duration"), (double) defaultDuration / 3600.0);
+		}
+
+		@Override
+		protected void updateMessage() {
+			setMessage(Component.literal("Duration: %02d:%02d".formatted(duration / 60, duration % 60)));
+		}
+
+		@Override
+		protected void applyValue() {
+			duration = (int) (this.value * 3600.0);
+		}
+
+		public void setSliderValue(double value) {
+			this.setValue(value);
+		}
 	}
 }

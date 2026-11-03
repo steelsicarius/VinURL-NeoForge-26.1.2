@@ -109,6 +109,11 @@ dependencies {
     // Mixin annotations (compileOnly - annotation processor can't access deobfuscated MC classes in this env;
     // mixins load at runtime via [[mixins]] in neoforge.mods.toml - see PORTING.md)
     compileOnly "org.spongepowered:mixin:0.8.5"
+
+    // Traveler's Backpack classes needed at compile time for @Mixin class reference.
+    // The mixin itself uses reflection for all field/method access (no @Shadow),
+    // so Traveler's Backpack is NOT required at runtime - this is only for compilation.
+    compileOnly files('/home/goose/proyectos/vinURL/Travelers-Backpack-26.1-neoforge/build/classes/java/main')
 }
 
 // Shade the bundled libraries' classes into the mod jar (production parity with Fabric `include`).

@@ -6,7 +6,8 @@
     "JukeboxMixin"
   ],
   "client": [
-    "InGameHudMixin"
+    "InGameHudMixin",
+    "JukeboxWidgetMixin"
   ],
   "injectors": {
     "defaultRequire": 1

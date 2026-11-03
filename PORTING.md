@@ -186,3 +186,86 @@ b) `URL_WHITELIST` was declared with `builder.define("urlWhitelist", Collections
 ## Pending Verification
 - User testing of: icon display, whitelist key message, download completion, config persistence
 - `runClient` cannot be tested: LWJGL aarch64/x64 mismatch
+## Issues Fixed — 2.6.3 Session (current)
+
+### 1. GUI del disco no se muestra correctamente (URLDiscScreen)
+**Root cause**: The NeoForge port replaced the Fabric owo-lib based GUI with a simpler vanilla Screen that was missing key elements from the Fabric version (lock toggle button, duration slider, proper layout with disc icon).
+
+**Fix**: Rewrote `URLDiscScreen.java` to match the Fabric layout more closely:
+- Added lock toggle button (🔓/🔒)
+- Added duration slider (0-3600 seconds) using `AbstractSliderButton`
+- Improved layout with disc icon on the left, URL field centered, buttons and slider properly positioned
+- Added `DurationSlider` inner class with public `setSliderValue()` for simulate callback integration
+
+**Files**: `URLDiscScreen.java`
+
+### 2. Traveler's Backpack jukebox integration (no sound from custom disc in backpack jukebox)
+**Root cause**: Traveler's Backpack's `JukeboxWidget.playDiscToPlayer()` plays `jukeboxSong.soundEvent().value()` which for VinURL discs is the silent `PLACEHOLDER_SOUND`. VinURL's `FileSound` streaming system was never invoked for Traveler's Backpack jukebox playback.
+
+**Fix**: Created `JukeboxWidgetMixin.java` that:
+- Mixes into `JukeboxWidget.mouseClicked()` to intercept play/stop button clicks
+- When a VinURL custom record is detected in the jukebox upgrade disk slot, cancels the vanilla (silent) sound and starts VinURL's `FileSound` playback instead
+- Uses reflection to access `JukeboxUpgrade.diskHandler` (Traveler's Backpack class) so no compile-time dependency on Traveler's Backpack is needed
+- Added `JukeboxWidgetMixin` to the `"client"` mixin section in `vinurl.mixins.json`
+- Added Traveler's Backpack compiled classes as `compileOnly` dependency in `build.gradle` for `@Mixin` target resolution
+
+**Files**: `JukeboxWidgetMixin.java` (new), `vinurl.mixins.json`, `build.gradle`
+
+
+## Issues Fixed — 2.6.3 Session (current) — Revised
+
+### 2. Traveler's Backpack jukebox integration (REVISED — reflection instead of @Shadow)
+**Problem**: The first implementation used `@Shadow` annotations to reference `JukeboxWidget`/`UpgradeWidgetBase` methods. In production (user's modpack with many other mods), Mixin failed to locate these methods at application time:
+```
+@Shadow method isTabOpened()Z ... was not located in the target class ... JukeboxWidget. No refMap loaded.
+```
+This crashed the client on mod load.
+
+**Fix**: Rewrote `JukeboxWidgetMixin.java` to use **pure reflection** instead of `@Shadow`:
+- All Traveler's Backpack method/field access resolved via `Class.forName()` + `getMethod()`/`getDeclaredField()` in a static initializer
+- If any method/field can't be resolved (mapping differences, missing Traveler's Backpack), the mixin gracefully degrades (no integration, no crash)
+- `@Mixin(JukeboxWidget.class)` still requires Traveler's Backpack classes at compile time (`compileOnly`), but NOT at runtime
+- Removed `@Shadow` declarations entirely
+
+**Files**: `JukeboxWidgetMixin.java` (rewritten), `build.gradle` (compileOnly Traveler's Backpack classes retained)
+
+
+## Issues Fixed — 2.6.3 Session (continued)
+
+### 2b. Traveler's Backpack jukebox integration — `mouseClicked` injection crash (REVISED again)
+**Problem**: The reflection-based mixin used `CallbackInfo` for `mouseClicked` injection, but `mouseClicked` returns `boolean`. Mixin requires `CallbackInfoReturnable<Boolean>` for methods with non-void return type:
+```
+InvalidInjectionException: Invalid descriptor ... @Inject::onMouseClicked(...CallbackInfo;)V! CallbackInfoReturnable is required!
+```
+This crashed the client on mod load (user's modpack with Traveler's Backpack installed).
+
+**Fix**: Changed `CallbackInfo ci` → `CallbackInfoReturnable<Boolean> cir` and `ci.cancel()` → `cir.setReturnValue(true)` to properly consume the click event (prevent original handler from running when a VinURL disc is detected).
+
+**Files**: `JukeboxWidgetMixin.java`
+
+## Final Status
+
+| Check | Result |
+|-------|--------|
+| `./gradlew build` | PASSING → `build/libs/vinurl-2.6.2.jar` |
+| `./gradlew runServer` (port 25599) | PASSING — starts cleanly, 0 errors |
+| VinURL disc GUI | Fixed — matches Fabric layout (lock toggle, duration slider, icon) |
+| Traveler's Backpack jukebox sound | Fixed — FileSound streaming used instead of silent vanilla sound event |
+
+
+## Issues Fixed — 2.6.4 Session (current — user report: error al entrar al servidor aunque cliente y servidor tengan el mod)
+
+### Dedicated server: cliente no puede conectarse ("channel missing on the server side, but required on the client")
+**Root cause**: `ClientNetwork` (`@EventBusSubscriber(value = Dist.CLIENT)`) registraba `play_sound`, `stop_sound` y `gui_record` como canales cliente-limitados (`playToClient`) **solo en el cliente físico**, y como no opcionales (por defecto). En un servidor dedicado `ClientNetwork` no se ejecuta, por lo que el servidor no conocía esos canales. Durante la negociación de canales de NeoForge (`NetworkComponentNegotiator.negotiate`), cualquier canal no opcional declarado en un lado debe ser conocido por el otro, independientemente de la dirección del flujo; el cliente requería `play_sound/stop_sound/gui_record` que el servidor no ofrecía → la conexión se rechazaba con *"Channel ... failed to connect: This channel is missing on the server side, but required on the client!"*.
+
+**Fix**: Registrar los 4 canales en el setup común (`Network`, bus de mod, ambos lados) para que la negociación tenga éxito:
+- `set_url` (`playToServer`, handler `ServerEvent::handleSetURL`) en ambos lados.
+- `play_sound`, `stop_sound`, `gui_record` (`playToClient`) en ambos lados, pero el handler de cliente solo se adjunta en el cliente físico (`FMLEnvironment.getDist() == Dist.CLIENT`). En el servidor dedicado se registran sin handler (2-arg `playToClient`): el canal se conoce para la negociación y `hasChannel`, así el servidor SÍ puede enviarlos, pero no carga clases cliente-solo (`ClientEvent`/`Minecraft`) en el servidor.
+- Eliminado `ClientNetwork.java` para evitar registros duplicados ("already registered").
+
+**Files**: `Network.java` (reescrito), `ClientNetwork.java` (eliminado)
+
+## Verificación
+- `./gradlew build`: PASSING → `build/libs/vinurl-2.6.2.jar`
+- `./gradlew runServer` (puerto 25599): arranca limpio (`Done (11.1s)!`), VinURL 2.6.2 cargado, **0 excepciones/warnings de red** en `run/logs/latest.log`. No hay "Attempted to load class net.minecraft.client.gui.Gui" ni errores de carga de clases cliente-solo en el servidor dedicado.
+- `runClient`: NO TESTEABLE (mismatch LWJGL aarch64/x64, ver PORTING.md previo). La corrección se valida por inspección del código de negociación de NeoForge 26.1.2 (`NetworkComponentNegotiator.negotiate`, `NetworkRegistry.initializeNeoForgeConnection`).

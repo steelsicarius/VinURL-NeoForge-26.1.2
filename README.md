@@ -59,6 +59,10 @@ This is a NeoForge port of the original Fabric mod. Key changes from the origina
 
 - **No sound from VinURL discs**: `FileSound` now plays the downloaded `.ogg` directly with vanilla `JOrbisAudioStream` (origin parity). The previous approach (external ffmpeg `.ogg → .wav` conversion + JavaSound) returned a failed future that `SoundEngine` swallows silently whenever the WAV was missing or lost the race against playback — resulting in total silence. ffmpeg is now only needed for yt-dlp's own audio postprocessing, not for playback.
 
+## Fixes in 2.6.4
+
+- **Error al entrar al servidor dedicado ("channel missing on the server side, but required on the client")**: `ClientNetwork` registraba `play_sound`, `stop_sound` y `gui_record` solo en el cliente físico (`@EventBusSubscriber(value = Dist.CLIENT)`) como canales no opcionales, así que el servidor dedicado no los conocía y la negociación de canales de NeoForge rechazaba la conexión. Ahora los 4 canales se registran en el setup común (`Network`, ambos lados) para que la negociación tenga éxito; el handler de cliente solo se adjunta en el cliente físico para no cargar clases cliente-solo en el servidor dedicado. `ClientNetwork` se eliminó para evitar registros duplicados.
+
 ## Mixins
 
 VinURL uses SpongePowered mixins for two features:
