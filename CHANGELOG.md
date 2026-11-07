@@ -1,0 +1,8 @@
+Version: 2.6.0-26.1.2 (NeoForge port)
+- port: full port of VinURL 2.6.0 from Fabric 26.1 to NeoForge 26.1.2 (NeoForge 26.1.2.114, ModDevGradle 2.0.148, Java 25)
+- port: owo-lib replaced with NeoForge APIs (CustomPacketPayload networking, ModConfigSpec + ConfigurationScreen, vanilla Screen rewrite, CompoundTag disc data)
+- port: commons-exec replaced with in-repo CommandBuilder (no new dependencies)
+- port: mixins kept and retargeted for 26.1.2 (JukeboxBlockEntity, Gui.setNowPlaying)
+- enhancement: music_discs item tag now ships under data/minecraft/tags/item/ (the original's tags/items/ path was never loaded)
+- change: silent placeholder sound is now an own vinurl:empty OGG (fabric-sound-api-v1 is not available on NeoForge)
+- change: jar name format VinURL-<version>-<mcversion> (VinURL-2.6.0-26.1.2.jar)
