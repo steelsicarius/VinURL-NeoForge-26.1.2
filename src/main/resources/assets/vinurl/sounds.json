@@ -1,0 +1,11 @@
+{
+  "empty": {
+    "sounds": [
+      {
+        "name": "vinurl:empty",
+        "attenuation_distance": 64,
+        "stream": true
+      }
+    ]
+  }
+}

@@ -1,5 +1,5 @@
 # Metadata for the VinURL NeoForge port.
-# Values in ${} are expanded by the generateModMetadata task (build.gradle).
+# Values of the form (dollar)(brace) are expanded by the generateModMetadata task (build.gradle).
 license="${mod_license}"
 issueTrackerURL="https://github.com/Plompi/VinURL/issues"
 

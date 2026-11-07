@@ -41,22 +41,33 @@ Fase 1 (esqueleto) — COMPLETADA. Fase 2 (registros) — EN CURSO.
 
 ## CAMBIOS DE API ENCONTRADOS (antes → después)
 
-(verificados contra `minecraft-patched-26.1.2.114-sources.jar`; se irán añadiendo)
+(verificados contra `minecraft-patched-26.1.2.114-sources.jar` + `neoforge-26.1.2.114-sources.jar`)
 
 | Fabric 26.1 / original | NeoForge 26.1.2 |
 | --- | --- |
-| `net.fabricmc.api.ModInitializer` | `@Mod("vinurl")` + constructor con `IEventBus` |
-| `Registry.register(BuiltInRegistries...)` estático | `DeferredRegister` |
-| `CreativeModeTabEvents.modifyOutputEvent(TOOLS_AND_UTILITIES)` | `BuildCreativeModeTabContentsEvent` (bus del mod) |
-| `OwoNetChannel` (owo) | `CustomPacketPayload` + `RegisterPayloadHandlersEvent` |
+| `Registry.register(BuiltInRegistries...)` estático | `DeferredRegister` (Items / SoundEvents) |
+| `CreativeModeTabEvents.modifyOutputEvent(TOOLS_AND_UTILITIES)` | `BuildCreativeModeTabContentsEvent` (bus del mod), `getTabKey()`/`accept(...)` |
+| `OwoNetChannel` (owo) | `CustomPacketPayload` + `RegisterPayloadHandlersEvent.registrar("1").playToClient/playToServer`; handlers en main thread por defecto; envío: `PacketDistributor.sendToPlayer`, cliente→servidor: `connection.send(payload)` |
 | `FabricLoader.getInstance().getGameDir()` | `FMLPaths.GAMEDIR.get()` |
-| `ItemTooltipCallback.EVENT` (fabric) | `ItemTooltipEvent` (NeoForge, bus de juego) |
-| `ClientPlayConnectionEvents.DISCONNECT` | evento de desconexión cliente NeoForge (verificar nombre exacto) |
-| `HudElementRegistry.addLast` (fabric) | `RegisterGuiLayersEvent` (NeoForge) (verificar firma con `GuiGraphicsExtractor`) |
-| `KeyMappingHelper.registerKeyMapping` | `RegisterKeyMappingsEvent` (bus del mod, client) |
-| `ClientCommandRegistrationCallback` (fabric) | `RegisterClientCommandsEvent` (NeoForge) |
-| `ConfigScreen.create(config)` (owo) | `ConfigurationScreen` (`IConfigScreenFactory`) |
+| `ItemTooltipCallback.EVENT` (fabric) | `ItemTooltipEvent` (`getItemStack()`, `getToolTip()`) |
+| `ClientPlayConnectionEvents.DISCONNECT` | `ClientPlayerNetworkEvent.LoggingOut` |
+| `HudElementRegistry.addLast` (fabric) | `RegisterGuiLayersEvent.registerBelowAll(id, GuiLayer)`; `GuiLayer.render(GuiGraphicsExtractor, DeltaTracker)` |
+| `KeyMappingHelper.registerKeyMapping` | `RegisterKeyMappingsEvent.register(KeyMapping)` |
+| `ClientCommandRegistrationCallback` (fabric) | `RegisterClientCommandsEvent.getDispatcher()` (bus de juego) |
+| `ConfigScreen.create(config)` (owo) | `ConfigurationScreen(ModContainer, Screen)` vía `IConfigScreenFactory` |
 | `sounds.json` → `fabric-sound-api-v1:empty` | `vinurl:empty` (WAV silencioso propio) |
+| `SoundInstance.getAudioStream(SoundBufferLibrary, Identifier, boolean)` | **RENOMBRADO en 26.1.2** → `SoundInstance.getStream(SoundBufferLibrary, Sound, boolean)` |
+| `CompoundTag.getString/getBoolean/getInt(key)` | **ELIMINADOS** → `getStringOr/getBooleanOr/getIntOr(key, default)` |
+| `SoundInstance.createUnseededRandom()` (package-private en 26.1.2) | `RandomSource.create()` (público, mismo resultado que el body del original) |
+| `data/minecraft/tags/items/*.json` (plural) | `data/minecraft/tags/item/*.json` (singular, `Registries.tagsDirPath`); el original estaba en plural → el tag no cargaba; corregido en el port |
+| `AbstractWidget.render/renderWidget` | modelo nuevo de render: `extractRenderState(GuiGraphicsExtractor,...)`/`extractWidgetRenderState`/`extractContents`; `Button.OnPress.onPress(Button)`; tooltips con `Tooltip.create(Component)` |
+| `AbstractSliderButton.dragging` (privado) | ya `protected` en 26.1.2 + AT de NeoForge — accesible desde subclase |
+| `owo-ui XML` + `NinePatchTexture` (owo) | `Screen` vanilla + nine-patch dibujado con `GuiGraphicsExtractor.blit(Identifier, x0,y0,x1,y1, u0,u1,v0,v1)` (esquinas 4 px, mismo layout del XML) |
+| mixin targets `JukeboxBlockEntity.setTheItem/popOutTheItem/tick` y `Gui.setNowPlaying` | **existentes** en 26.1.2 (líneas 135/48/64 y 1323 de las fuentes decompiladas) — mixins portables sin cambios de objetivo |
+| mixin `compatibilityLevel JAVA_25` | soportado por sponge-mixin 0.17.4 (mixin 0.8.7) en NeoForge 26.1.2 |
+| `@EventBusSubscriber` (sin parámetro `bus`) | en NeoForge 26.1.2 el bus se autodetecta (IModBusEvent → bus del mod); anotación solo con `modid`/`value` |
+
+Formatos de datos verificados en el jar de MC 26.1.2: recipe con `ingredients` como strings ✓ (igual que el original), `jukebox_song` idéntico ✓.
 
 ## ERRORES ABIERTOS / BLOQUEOS
 
