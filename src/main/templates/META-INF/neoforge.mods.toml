@@ -1,0 +1,32 @@
+# Metadata for the VinURL NeoForge port.
+# Values in ${} are expanded by the generateModMetadata task (build.gradle).
+license="${mod_license}"
+issueTrackerURL="https://github.com/Plompi/VinURL/issues"
+
+[[mods]]
+modId="${mod_id}"
+version="${mod_version}"
+displayName="${mod_name}"
+authors="Plompi, Hoofer"
+displayURL="${mod_url}"
+logoFile="vinurl_icon.png"
+description='''
+Adds a writeable music disc, allowing you to customize the music that plays from any link.
+'''
+
+[[mixins]]
+config="${mod_id}.mixins.json"
+
+[[dependencies.${mod_id}]]
+    modId="neoforge"
+    type="required"
+    versionRange="[${neo_version},)"
+    ordering="NONE"
+    side="BOTH"
+
+[[dependencies.${mod_id}]]
+    modId="minecraft"
+    type="required"
+    versionRange="${minecraft_version_range}"
+    ordering="NONE"
+    side="BOTH"
