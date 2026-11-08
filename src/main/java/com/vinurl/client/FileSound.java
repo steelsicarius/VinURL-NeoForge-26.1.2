@@ -20,50 +20,57 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 
 import static com.vinurl.VinURL.PLACEHOLDER_SOUND;
+import static com.vinurl.util.Constants.LOGGER;
 
 public class FileSound extends AbstractTickableSoundInstance {
-	public final String fileName;
-	private final long startTime;
+        public final String fileName;
+        private final long startTime;
 
-	public final @Nullable BlockPos position;
-	public final @Nullable Entity entity;
+        public final @Nullable BlockPos position;
+        public final @Nullable Entity entity;
 
-	public FileSound(String fileName, @Nullable BlockPos pos, @Nullable Entity entity) {
-		super(PLACEHOLDER_SOUND.get(), SoundSource.RECORDS, RandomSource.create());
-		this.fileName = fileName;
-		this.startTime = Util.getMillis();
-		this.position = pos;
-		this.entity = entity;
-	}
+        public FileSound(String fileName, @Nullable BlockPos pos, @Nullable Entity entity) {
+                super(PLACEHOLDER_SOUND.get(), SoundSource.RECORDS, RandomSource.create());
+                this.fileName = fileName;
+                this.startTime = Util.getMillis();
+                this.position = pos;
+                this.entity = entity;
+        }
 
-	@Override
-	public void tick() {
-		if (entity != null) {
-			this.x = entity.getX();
-			this.y = entity.getY();
-			this.z = entity.getZ();
+        @Override
+        public void tick() {
+                if (entity != null) {
+                        this.x = entity.getX();
+                        this.y = entity.getY();
+                        this.z = entity.getZ();
 
-			if (entity.isRemoved()) {
-				this.stop();
-			}
-		}
+                        if (entity.isRemoved()) {
+                                this.stop();
+                        }
+                }
 
-		else if (position != null) {
-			this.x = position.getCenter().x;
-			this.y = position.getCenter().y;
-			this.z = position.getCenter().z;
-		}
-	}
+                else if (position != null) {
+                        this.x = position.getCenter().x;
+                        this.y = position.getCenter().y;
+                        this.z = position.getCenter().z;
+                }
+        }
 
-	@Override
-	public CompletableFuture<AudioStream> getStream(SoundBufferLibrary soundBuffers, Sound sound, boolean looping) {
-		return CompletableFuture.supplyAsync(() -> {
-			try {
-				InputStream inputStream = new FileInputStream(SoundManager.getAudioFile(fileName));
-				return SkippableAudioStream.offset(new JOrbisAudioStream(inputStream), Util.getMillis() - startTime);
-			} catch (IOException e) {
-				throw new CompletionException(e);
-			}
-		}, Util.nonCriticalIoPool());
-	}
+        @Override
+        public CompletableFuture<AudioStream> getStream(SoundBufferLibrary soundBuffers, Sound sound, boolean looping) {
+                return CompletableFuture.supplyAsync(() -> {
+                        try {
+                                InputStream inputStream = new FileInputStream(SoundManager.getAudioFile(fileName));
+                                return SkippableAudioStream.offset(new JOrbisAudioStream(inputStream), Util.getMillis() - startTime);
+                        } catch (IOException | RuntimeException e) {
+                                // SoundEngine.play() swallows failed stream futures without logging;
+                                // surface the real cause here so silent playback is never undiagnosable.
+                                throw new CompletionException("VinURL could not open the audio stream for '" + fileName + "'", e);
+                        }
+                }, Util.nonCriticalIoPool()).whenComplete((stream, error) -> {
+                        if (error != null) {
+                                LOGGER.error("Failed to open audio stream for '{}' ({})", fileName, SoundManager.getAudioFile(fileName), error);
+                        }
+                });
+        }
 }

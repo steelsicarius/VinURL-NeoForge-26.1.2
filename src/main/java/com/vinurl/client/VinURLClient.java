@@ -34,7 +34,16 @@ import static com.vinurl.util.Constants.PROGRESS_HUD_ID;
 // The bus is auto-detected in NeoForge 26.1.2 (IModBusEvent goes to the mod bus, everything else to the game bus).
 @EventBusSubscriber(modid = MOD_ID, value = Dist.CLIENT)
 public class VinURLClient {
-        public static final Minecraft CLIENT = Minecraft.getInstance();
+        /**
+         * Resolved on every use instead of cached in a static initializer:
+         * NeoForge can class-load this type before the Minecraft instance exists
+         * (mod construction / @EventBusSubscriber registration), which made the old
+         * `static final Minecraft CLIENT = Minecraft.getInstance()` permanently null
+         * and silently kill sound playback (NPE inside the play/stop payload handlers).
+         */
+        public static Minecraft getClient() {
+                return Minecraft.getInstance();
+        }
 
         public VinURLClient(ModContainer container) {
                 // Register the client config so FML can create and load the config file for us
