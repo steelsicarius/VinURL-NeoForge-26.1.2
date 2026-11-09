@@ -203,3 +203,13 @@ Cada versión abajo corrige síntomas reportados en vivo por el usuario (MC 26.1
 8. Verificación de bytecode del jar final: descriptores BiMap/DeferredHolder/métodos TB presentes y `com/tiviacz/**` excluido.
 
 **Cómo probar TB 2.6.8**: mochila con upgrade de jukebox → insertar disco VinURL escrito → botón play del upgrade → audio servido por el servidor (se oye en un rango de 64 bloques, anclado al jugador; sobrevive a abrir/cerrar la mochila con B). Sin TB instalado el mixin no se aplica y el log queda limpio.
+
+## VALIDACIÓN DEL USUARIO (cierre del port 2.6.8)
+
+- 09/11/2026, servidor dedicado NeoForge 26.1.2 (ARM, 125 mods) con Traveler's Backpack 11.2.9 instalado:
+  **jukebox, backpack (jukebox upgrade), disco, descarga y sonido — todo funcionando** (confirmado por el usuario).
+- Nota: un crash posterior del servidor ("ClassCastException: DyeColor cannot be cast to Holder" en
+  LivingEntity.refreshVariantAttributes) es ajeno a VinURL — lo provoca el mixin
+  `selectMissingVariant` de **Unified API** (unified-api 26.1-1.0-beta-23), y fue confirmado por el
+  usuario tras aislarlo. El arranque con VinURL 2.6.8 fue completo y limpio (Done! en 2.9s, sin
+  ningún error de vinurl en el log; en 2.6.7 el mixin TB con firma errónea mataba el arranque con FATAL).
