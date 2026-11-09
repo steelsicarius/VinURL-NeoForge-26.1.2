@@ -16,7 +16,9 @@ import java.io.IOException;
 import java.nio.file.Path;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Locale;
 import java.util.Objects;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Stream;
 
 import static com.vinurl.client.VinURLConfig.CONFIG;
@@ -30,6 +32,7 @@ public class SoundManager {
 
         public static void downloadSound(String url, String fileName) {
                 ProgressOverlay.set(fileName, 0);
+                AtomicReference<String> lastError = new AtomicReference<>("");
 
                 Executable.executeCommand(
                         fileName + "/download",
@@ -51,19 +54,50 @@ public class SoundManager {
                                 switch (type) {
                                         case "PROGRESS:" -> ProgressOverlay.set(fileName, Integer.parseInt(message));
                                         case "WARNING:" -> LOGGER.warn(message);
-                                        case "ERROR:" -> LOGGER.error(message);
+                                        case "ERROR:" -> {
+                                                LOGGER.error(message);
+                                                lastError.set(message);
+                                        }
                                         default -> LOGGER.info(output);
                                 }
                         })
                         .onError((error) -> {
                                 ProgressOverlay.stopFailed(fileName);
                                 deleteSound(fileName);
+                                reportDownloadFailure(fileName, lastError.get(), error);
                         })
                         .onComplete(() -> {
                                 ProgressOverlay.stop(fileName);
                                 setDescription(fileName);
                         })
                 .start();
+        }
+
+        /**
+         * Surfaces a failed download to the player and the log. The HUD alone only shows
+         * 'Interrupted', which made real failures look like a silent mod bug: yt-dlp exits
+         * non-zero (e.g. YouTube's "Sign in to confirm you're not a bot" bot-check, a missing
+         * or outdated executable, or a blocked network) and the reason was never shown.
+         * Runs on the publisher worker thread, so the chat call is re-scheduled onto the
+         * client thread.
+         */
+        private static void reportDownloadFailure(String fileName, String ytDlpError, Throwable error) {
+                String reason = (ytDlpError == null || ytDlpError.isBlank()) ? Objects.toString(error) : ytDlpError;
+                LOGGER.error("Download failed for '{}': {}", fileName, reason, error);
+
+                Minecraft client = Minecraft.getInstance();
+                client.execute(() -> {
+                        if (client.player == null) {return;}
+                        client.player.sendSystemMessage(
+                                        Component.translatable("message.vinurl.download.failed", reason));
+
+                        String lower = reason.toLowerCase(Locale.ROOT);
+                        if (lower.contains("sign in") || lower.contains("not a bot") || lower.contains("cookies")
+                                        || lower.contains("429") || lower.contains("too many requests")) {
+                                client.player.sendSystemMessage(
+                                                Component.translatable("message.vinurl.download.failed.cookies"));
+                        }
+                });
         }
 
         public static void deleteSound(String fileName) {

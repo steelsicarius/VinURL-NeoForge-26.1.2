@@ -30,3 +30,12 @@ config="${mod_id}.mixins.json"
     versionRange="${minecraft_version_range}"
     ordering="NONE"
     side="BOTH"
+
+# Optional integration: jukebox upgrade of Traveler's Backpack (server-side audio via
+# ServerActionsMixin, gated by VinURLMixinPlugin). Ordering AFTER so TB loads first.
+[[dependencies.${mod_id}]]
+    modId="travelersbackpack"
+    type="optional"
+    versionRange="[11,)"
+    ordering="AFTER"
+    side="BOTH"

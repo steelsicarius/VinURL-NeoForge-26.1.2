@@ -166,3 +166,40 @@ Formatos de datos verificados en el jar de MC 26.1.2: recipe con `ingredients` c
 ## BLOQUEOS ABIERTOS
 
 - Ninguno. (El cierre por `stop` de stdin no se pudo automatizar en el sandbox — ver VERIFICACIÓN; no es un bloqueo de código.)
+
+## CRÓNICAS 2.6.4 → 2.6.8 (rondas de corrección con el usuario)
+
+Cada versión abajo corrige síntomas reportados en vivo por el usuario (MC 26.1.2, cliente y servidor con Traveler's Backpack). Regla aplicada en todas: nada de errores silenciados ni stubs en el jar final; cada diagnóstico se verificó contra código fuente (MC/TB) antes de tocar el port.
+
+### 2.6.4 — audio
+- **Síntoma**: al parar un disco el audio seguía sonando; en algunos casos nada sonaba.
+- **Causa**: `stop` instantáneo por `duration=0` (el sonido se registraba y cancelaba en el mismo tick) y campo `CLIENT` estático aún `null` durante el arranque temprano del cliente.
+- **Corrección**: guardas de null + no cancelar por duration antes de que el engine confirme el playback. Commit `c9e2607` / `1480e52`.
+
+### 2.6.5–2.6.6 — iconos y texto invisibles (UI)
+- **Síntoma 1**: tras pegar una URL en el disco (clic derecho), el texto no se veía; los botones de la pantalla tampoco se dibujaban bien.
+- **Causa raíz (verificada en el código de NeoForge 26.1.2)**: la sobrecarga `GuiGraphicsExtractor.blit(location, x0, y0, x1, y1, u0, u1, v0, v1)` espera **pares UV NORMALIZADOS** (rectángulo fuente de (u0,v0) a (u1,v1)), no offset+tamaño. El port 2.6.4 le pasaba píxeles (0,0,110,16) → el muestreo salía del rango → iconos invisibles/corruptos.
+- **Correcciones**:
+  1. `NinePatch.java`: UV normalizado `u/tamaño_textura` (textura 16×16, esquinas 4×4) — las 9 parcelas muestrean la región correcta.
+  2. `Constants.java`: los `Identifier` de texturas GUI ahora incluyen la ruta REAL completa (`textures/gui/*.png`); el blit NO antepone `textures/gui` por su cuenta.
+  3. `URLDiscScreen.java`: orden de render corregido — el marco del campo de texto se dibuja ANTES de `super` (el marco bajo el texto; el EditBox pinta encima). Regresión introducida al arreglar el blit.
+- Nota: el diagnóstico original de "mods.toml corrupto ([ods]]/[ixins]])" resultó ser un artefacto de visualización del terminal (el renderer se come la secuencia `[[m`); el archivo siempre fue TOML válido (verificado byte a byte).
+
+### 2.6.7 — Traveler's Backpack (primer intento, FALLO en servidor)
+- **Síntoma 2 (además)**: al poner el disco en la mochila TB sonaba SILENCIO; y descargar daba `ERROR: Interrupted` sin más.
+- **Causa del silencio TB (verificada contra la fuente de TB subida por el usuario)**: TB solo reproduce el `JukeboxSong` del CLIENTE; el disco VinURL lleva un placeholder silencioso → nunca se oye nada. Hay que disparar el audio desde el SERVIDOR, como hace el jukebox vanilla vía `JukeboxMixin`.
+- **Punto de enganche**: `ServerActions.modifyUpgradeTab` — cuello único por el que pasa toda acción del panel de upgrades de TB (play/stop record, abrir/cerrar pestaña, tecla B...).
+- **FALLO de 2.6.7**: el mixin apuntaba a la firma `(…IIZ)V` — parámetros intercambiados. La firma real es `modifyUpgradeTab(BackpackWrapper, int slot, boolean open, int packetType)` → descriptor `(Lcom/tiviacz/travelersbackpack/inventory/BackpackWrapper;IZI)V`. Con firma errónea el mixin no aplica y FML aborta con FATAL al iniciar el servidor del usuario.
+- **`ERROR: Interrupted`**: `ProcessStream` bloqueaba el `commonPool` (el `startProcess` bloqueante mata al consumidor del publisher) y las excepciones se tragaban. El HUD solo mostraba "Interrupted" y la causa real (anti-bot de YouTube, cookies, red...) nunca se veía.
+
+### 2.6.8 — corrección completa de lo anterior (ESTA VERSIÓN)
+1. **Mixin TB reescrito con la firma REAL** `(...IZI)V`, verificado contra la fuente TB 26.1 (`ServerActions.java:288`): `@Inject(method="modifyUpgradeTab(Lcom/tiviacz/travelersbackpack/inventory/BackpackWrapper;IZI)V", at=@At("TAIL"))`.
+2. **Mixin condicional**: `VinURLMixinPlugin` (IMixinConfigPlugin) aplica `ServerActionsMixin` SOLO si TB está instalado. Ojo: `ModList.get()` es NULL en la fase "prepare" de Mixin (NPE verificada) → se detecta con `FMLLoader.getCurrentOrNull().getLoadingModList().getModFileById("travelersbackpack")`.
+3. **`TravelersBackpackCompat`**: filtra `packetType == ServerActions.PLAY_RECORD (=3)`; obtiene el disco del upgrade vía `UpgradeManager.mappedUpgrades` (BiMap — el descriptor del campo debe ser exactamente `Lcom/google/common/collect/BiMap;` o hay NoSuchFieldError) → `UpgradeBase.getDataHolderStack()` → `ModDataComponents.BACKPACK_CONTAINER` → `allItemsCopyStream()`; play → `VinURLSound.playFor(level, disc, playerID)`, stop → `stopFor(..., cancelable=false)`. Todo en try-catch con log: un fallo de compat no tumba el servidor.
+4. **Stubs de compilación** (`tb-stubs/`, excluidos del jar por `exclude 'com/tiviacz/**'`): BackpackWrapper, ServerActions, UpgradeManager, UpgradeBase, ModDataComponents — con descriptores EXACTOS de TB 26.1. `PLAY_RECORD = 3` es constante en línea (inline): el valor debe coincidir con la fuente real (verificado: ServerActions.java:268).
+5. **`ProcessStream`**: hilo de plataforma dedicado `VinURL-Process[id]` (daemon) en vez del commonPool + `closeExceptionally` que propaga el código de salida/excepción real. El `startProcess` bloqueante ya no mata a los subscriptores.
+6. **Errores visibles**: `SoundManager.reportDownloadFailure` — si yt-dlp sale con error, el jugador ve EN EL CHAT el motivo real (`message.vinurl.download.failed` con el texto de yt-dlp) y, si huele a anti-bot ("sign in", "not a bot", "cookies", 429), además `message.vinurl.download.failed.cookies` (consejo de cookies de navegador). Mensajes en `en_us.json` y `es_es.json`.
+7. Iconos/texto: fixes de 2.6.5–2.6.6 (NinePatch UV, rutas de textura, orden de render).
+8. Verificación de bytecode del jar final: descriptores BiMap/DeferredHolder/métodos TB presentes y `com/tiviacz/**` excluido.
+
+**Cómo probar TB 2.6.8**: mochila con upgrade de jukebox → insertar disco VinURL escrito → botón play del upgrade → audio servido por el servidor (se oye en un rango de 64 bloques, anclado al jugador; sobrevive a abrir/cerrar la mochila con B). Sin TB instalado el mixin no se aplica y el log queda limpio.

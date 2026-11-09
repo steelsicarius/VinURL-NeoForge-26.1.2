@@ -141,8 +141,11 @@ public class URLDiscScreen extends Screen {
         @Override
         public void extractRenderState(GuiGraphicsExtractor graphics, int mouseX, int mouseY, float delta) {
                 this.renderPanel(graphics);
-                super.extractRenderState(graphics, mouseX, mouseY, delta);
+                // The text-field frame must be drawn UNDER the EditBox text: the widgets (URL text,
+                // cursor and hint) are rendered by super, so blitting the frame after super covers
+                // everything the player types (regression introduced when the blit itself was fixed).
                 this.renderTextFieldTexture(graphics);
+                super.extractRenderState(graphics, mouseX, mouseY, delta);
 
                 if (this.durationSlider != null && this.durationSlider.isDragging()) {
                         graphics.setTooltipForNextFrame(
@@ -165,7 +168,8 @@ public class URLDiscScreen extends Screen {
                 int x = (this.width - PANEL_WIDTH) / 2 + PANEL_PADDING;
                 int y = (this.height - PANEL_HEIGHT) / 2 + PANEL_PADDING;
                 Identifier texture = this.urlTextbox.isFocused() ? TEXT_FIELD_TEXTURE : TEXT_FIELD_DISABLED_TEXTURE;
-                graphics.blit(texture, x, y, x + TEXT_FIELD_SIZE, y + BUTTON_SIZE, 0, 0, TEXT_FIELD_SIZE, BUTTON_SIZE);
+                // Normalized UV pair overload: (x0,y0,x1,y1) into (u0,u1,v0,v1) = the whole texture.
+                graphics.blit(texture, x, y, x + TEXT_FIELD_SIZE, y + BUTTON_SIZE, 0f, 1f, 0f, 1f);
         }
 
         @Override

@@ -26,6 +26,8 @@
   "message.vinurl.custom_record.url.long" : "Song URL is too long!",
   "message.vinurl.custom_record.duration.invalid" : "The duration is invalid!",
   "message.vinurl.custom_record.whitelist" : "Press %s to whitelist %s",
+  "message.vinurl.download.failed": "VinURL download failed: %s",
+  "message.vinurl.download.failed.cookies": "Tip: YouTube is asking for verification. Add --cookies-from-browser <firefox|chrome|edge|...> to the 'YT-DLP Parameters' option in the VinURL config and try again.",
   "command.vinurl.delete.success": "Deleted all audio files",
   "command.vinurl.delete.exception": "Deleted only non active audio files",
   "command.vinurl.update.check": "Checking for updates...",

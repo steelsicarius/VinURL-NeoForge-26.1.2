@@ -111,6 +111,10 @@ configurations {
 }
 
 dependencies {
+    // Traveler's Backpack compile-time stubs (tb-stubs/src/main/java) are compiled TOGETHER
+    // with main (same classpath, simplest way to get the MC/NeoForge types they reference)
+    // but are EXCLUDED from the mod jar below: at runtime the REAL TB classes are used,
+    // and the TB mixin only applies when Traveler's Backpack is actually installed.
     // Example optional mod dependency with JEI
     // The JEI API is declared for compile time use, while the full JEI artifact is used at runtime
     // compileOnly "mezz.jei:jei-${mc_version}-common-api:${jei_version}"
@@ -132,6 +136,15 @@ dependencies {
     // For more info:
     // http://www.gradle.org/docs/current/userguide/artifact_dependencies_tutorial.html
     // http://www.gradle.org/docs/current/userguide/dependency_management.html
+}
+
+sourceSets.main.java {
+    srcDir 'tb-stubs/src/main/java'
+}
+
+// Keep the TB stub classes (com.tiviacz.**) out of every jar variant of the mod.
+tasks.withType(Jar).configureEach {
+    exclude 'com/tiviacz/**'
 }
 
 // This block of code expands all declared replace properties in the specified resource targets.
